@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.env*.local
+.env.development
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+test-results/
+.playwright-mcp/
+graphify-out/
+.agents/

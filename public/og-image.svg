@@ -1,0 +1,19 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#1a1a2e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#c8a87c"/>
+      <stop offset="100%" stop-color="#a8875e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <line x1="80" y1="100" x2="1120" y2="100" stroke="url(#accent)" stroke-width="2" opacity="0.6"/>
+  <text x="600" y="310" text-anchor="middle" font-family="Georgia, serif" font-size="64" fill="#c8a87c" font-weight="bold" letter-spacing="3">Le Palme Ahangama</text>
+  <text x="600" y="380" text-anchor="middle" font-family="Georgia, serif" font-size="24" fill="#888" letter-spacing="6">BEACHFRONT HOTEL</text>
+  <line x1="480" y1="410" x2="720" y2="410" stroke="url(#accent)" stroke-width="1" opacity="0.4"/>
+  <text x="600" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#666" letter-spacing="2">AHANGAMA · SRI LANKA</text>
+  <line x1="80" y1="530" x2="1120" y2="530" stroke="url(#accent)" stroke-width="2" opacity="0.6"/>
+</svg>
