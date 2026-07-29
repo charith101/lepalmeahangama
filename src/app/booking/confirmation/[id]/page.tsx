@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { formatCurrency } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { bookingOrderSchema } from "@/lib/seo"
@@ -30,7 +30,7 @@ type Props = { params: Promise<{ id: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: booking } = await supabase
     .from("bookings")
     .select("id, check_in, check_out, room_total_usd, status, rooms(room_number, room_categories(name))")
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ConfirmationPage({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: booking } = await supabase
     .from("bookings")

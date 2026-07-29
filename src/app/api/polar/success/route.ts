@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getPolarClient } from "@/lib/polar"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { sendBookingConfirmation } from "@/lib/email"
 
 export async function GET(request: NextRequest) {
   const checkoutId = request.nextUrl.searchParams.get("checkout_id")
@@ -39,6 +40,8 @@ export async function GET(request: NextRequest) {
           .update({ status: "active" })
           .eq("booking_id", bookings[0].id)
           .eq("status", "pending")
+
+        await sendBookingConfirmation(bookings[0].id)
       }
 
       return NextResponse.redirect(new URL(`/booking/confirmation/${bookings?.[0]?.id || ""}`, request.url))
@@ -66,6 +69,8 @@ export async function GET(request: NextRequest) {
           .update({ status: "active" })
           .eq("booking_id", booking.id)
           .eq("status", "pending")
+
+        await sendBookingConfirmation(booking.id)
       }
 
       return NextResponse.redirect(new URL(`/booking/confirmation/${bookingId}`, request.url))

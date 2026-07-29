@@ -75,7 +75,7 @@ export function PublicNavbar() {
                     <Link
                       key={link.label}
                       href={link.href}
-                      className={`text-xs font-sans font-medium uppercase tracking-[0.15em] transition-colors duration-200 hover:opacity-70 ${
+                      className={`relative text-xs font-sans font-medium uppercase tracking-[0.15em] transition-colors duration-200 hover:opacity-70 after:absolute after:bottom-[-3px] after:left-0 after:h-px after:w-full after:bg-current after:origin-left after:scale-x-0 after:transition-transform after:duration-200 hover:after:scale-x-100 ${
                         scrolledPast ? "text-stone-700 dark:text-stone-200" : "text-white/90"
                       }`}
                     >
@@ -84,7 +84,7 @@ export function PublicNavbar() {
                   ))}
                   <Link
                     href="/booking/lookup"
-                    className={`text-xs font-sans font-medium uppercase tracking-[0.15em] transition-colors duration-200 hover:opacity-70 ${
+                    className={`relative text-xs font-sans font-medium uppercase tracking-[0.15em] transition-colors duration-200 hover:opacity-70 after:absolute after:bottom-[-3px] after:left-0 after:h-px after:w-full after:bg-current after:origin-left after:scale-x-0 after:transition-transform after:duration-200 hover:after:scale-x-100 ${
                       scrolledPast ? "text-stone-500 dark:text-stone-400" : "text-white/70"
                     }`}
                   >
@@ -177,7 +177,7 @@ export function PublicNavbar() {
                 key={link.label}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className={`block py-3 text-base font-sans font-medium transition-all duration-300 border-l-2 border-transparent hover:border-current pl-4 -ml-4 ${
+                className={`relative block py-3 text-base font-sans font-medium transition-all duration-300 border-l-2 border-transparent hover:border-current pl-4 -ml-4 after:absolute after:bottom-0 after:left-4 after:h-px after:w-[calc(100%-1rem)] after:bg-current after:origin-left after:scale-x-0 after:transition-transform after:duration-200 hover:after:scale-x-100 ${
                   scrolledPast
                     ? "text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-stone-100"
                     : "text-white/80 hover:text-white"
@@ -206,7 +206,7 @@ export function PublicNavbar() {
           <Link
             href="/booking/lookup"
             onClick={() => setOpen(false)}
-            className={`block py-3 text-base font-sans font-medium transition-all duration-300 border-l-2 border-transparent hover:border-current pl-4 -ml-4 ${
+            className={`relative block py-3 text-base font-sans font-medium transition-all duration-300 border-l-2 border-transparent hover:border-current pl-4 -ml-4 after:absolute after:bottom-0 after:left-4 after:h-px after:w-[calc(100%-1rem)] after:bg-current after:origin-left after:scale-x-0 after:transition-transform after:duration-200 hover:after:scale-x-100 ${
               scrolledPast
                 ? "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
                 : "text-white/70 hover:text-white"

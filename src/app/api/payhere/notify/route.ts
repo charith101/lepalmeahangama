@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyNotification } from "@/lib/payhere"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { sendBookingConfirmation } from "@/lib/email"
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,6 +57,8 @@ export async function POST(request: NextRequest) {
           .update({ status: "active" })
           .eq("booking_id", bookings[0].id)
           .eq("status", "pending")
+
+        await sendBookingConfirmation(bookings[0].id)
       }
     } else if (bookingId) {
       const { data: booking } = await supabase
@@ -84,6 +87,8 @@ export async function POST(request: NextRequest) {
           .update({ status: "active" })
           .eq("booking_id", booking.id)
           .eq("status", "pending")
+
+        await sendBookingConfirmation(booking.id)
       }
     }
 
