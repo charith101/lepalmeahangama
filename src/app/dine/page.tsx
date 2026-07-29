@@ -38,9 +38,9 @@ export default function DinePage() {
                 Reserve a Table
               </Link>
             </div>
-            <div className="relative aspect-[4/3] overflow-hidden bg-stone-200 dark:bg-stone-800">
+            <div className="relative aspect-4/3 overflow-hidden bg-stone-200 dark:bg-stone-800">
               <img
-                src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop"
+                src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=1000&auto=format&fit=crop"
                 alt="Restaurant dining at Le Palme"
                 className="w-full h-full object-cover"
               />
@@ -48,23 +48,23 @@ export default function DinePage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="relative aspect-[4/5] overflow-hidden bg-stone-200 dark:bg-stone-800">
+            <div className="relative aspect-4/5 overflow-hidden bg-stone-200 dark:bg-stone-800">
               <img
-                src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=2080&auto=format&fit=crop"
+                src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop"
                 alt="Sri Lankan cuisine"
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="relative aspect-[4/5] overflow-hidden bg-stone-200 dark:bg-stone-800 mt-8">
+            <div className="relative aspect-4/5 overflow-hidden bg-stone-200 dark:bg-stone-800 mt-8">
               <img
-                src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop"
+                src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000&auto=format&fit=crop"
                 alt="Fresh seafood"
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="relative aspect-[4/5] overflow-hidden bg-stone-200 dark:bg-stone-800">
+            <div className="relative aspect-4/5 overflow-hidden bg-stone-200 dark:bg-stone-800">
               <img
-                src="https://images.unsplash.com/photo-1550966871-3ed3cdb1f0c2?q=80&w=2070&auto=format&fit=crop"
+                src="https://images.unsplash.com/photo-1549666020-bd56b7d535f2?q=80&w=1000&auto=format&fit=crop"
                 alt="Restaurant interior"
                 className="w-full h-full object-cover"
               />

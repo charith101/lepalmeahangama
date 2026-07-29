@@ -215,6 +215,103 @@ export async function createMultiRoomBooking(data: {
   return { data: { bookingIds, polarCheckoutUrl, groupBookingId } }
 }
 
+export async function createPayHereBooking(data: {
+  guest: { full_name: string; email?: string; phone?: string; nationality?: string; nic_or_passport?: string }
+  roomSelections: Array<{
+    room_id: string
+    check_in: string
+    check_out: string
+    room_total_usd?: number
+    num_guests?: number
+  }>
+  grand_total_usd?: number
+  equipment?: Array<{ unit_id: string; start_date: string; end_date: string; price_usd?: number }>
+  transfer?: { route_id: string; direction: "arrival" | "departure"; flight_number?: string; transfer_datetime: string; price_usd?: number }
+}) {
+  const guestResult = guestSchema.safeParse({
+    fullName: data.guest.full_name,
+    email: data.guest.email ?? "",
+    phone: data.guest.phone ?? "",
+    nationality: data.guest.nationality ?? "",
+    nic_passport: data.guest.nic_or_passport ?? "",
+  })
+  if (!guestResult.success) {
+    return { error: guestResult.error.issues.map((i) => i.message).join("; ") }
+  }
+
+  for (const sel of data.roomSelections) {
+    const validated = await validateAndComputeRoomTotal(sel.room_id, sel.check_in, sel.check_out)
+    if (typeof validated === "string") return { error: validated }
+  }
+
+  const supabase = createAdminClient()
+
+  const { data: guest, error: guestErr } = await supabase
+    .from("guests").insert(data.guest).select().single()
+  if (guestErr) return { error: guestErr.message }
+
+  const groupBookingId = crypto.randomUUID()
+  const bookingIds: string[] = []
+
+  for (const sel of data.roomSelections) {
+    const roomTotal = await validateAndComputeRoomTotal(sel.room_id, sel.check_in, sel.check_out)
+    if (typeof roomTotal === "string") {
+      await supabase.from("guests").delete().eq("id", guest.id)
+      return { error: roomTotal }
+    }
+
+    const { data: booking, error: bookingErr } = await supabase
+      .from("bookings")
+      .insert({
+        guest_id: guest.id,
+        room_id: sel.room_id,
+        check_in: sel.check_in,
+        check_out: sel.check_out,
+        status: "pending_payment",
+        source: "website",
+        num_guests: sel.num_guests,
+        room_total_usd: roomTotal,
+        group_booking_id: groupBookingId,
+      })
+      .select()
+      .single()
+
+    if (bookingErr) {
+      await supabase.from("guests").delete().eq("id", guest.id)
+      return { error: bookingErr.message }
+    }
+    bookingIds.push(booking.id)
+  }
+
+  for (const eq of data.equipment || []) {
+    await supabase.from("equipment_bookings").insert({
+      unit_id: eq.unit_id,
+      guest_id: guest.id,
+      booking_id: bookingIds[0],
+      start_date: eq.start_date,
+      end_date: eq.end_date,
+      price_usd: eq.price_usd ?? 0,
+      status: "pending",
+    })
+  }
+
+  if (data.transfer) {
+    await supabase.from("airport_transfers").insert({
+      route_id: data.transfer.route_id,
+      booking_id: bookingIds[0],
+      guest_id: guest.id,
+      direction: data.transfer.direction,
+      flight_number: data.transfer.flight_number,
+      transfer_datetime: data.transfer.transfer_datetime,
+      price_usd: data.transfer.price_usd ?? 0,
+      status: "scheduled",
+    })
+  }
+
+  revalidatePath("/dashboard/calendar")
+  return { data: { bookingIds, groupBookingId, grandTotal: data.grand_total_usd ?? 0 } }
+}
+
 export async function getBooking(id: string) {
   const auth = await requireStaff()
   if ("error" in auth) return { error: auth.error }
@@ -362,8 +459,6 @@ export type BookingLookupResult = {
 }
 
 export async function lookupBookingByRef(refCode: string, email: string) {
-  const auth = await requireStaff()
-  if ("error" in auth) return { error: auth.error }
   const supabase = await createServerClient()
   const refUpper = refCode.toUpperCase().trim()
 

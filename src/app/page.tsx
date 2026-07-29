@@ -17,7 +17,7 @@ export default function HomePage() {
       <RestaurantSection />
       <ExperiencesSection />
       <EventsSection />
-      <NewsletterSection />
+      {/* <NewsletterSection /> */}
     </>
   )
 }

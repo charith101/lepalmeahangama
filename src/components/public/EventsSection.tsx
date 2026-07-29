@@ -1,20 +1,17 @@
-import Link from "next/link"
+import { AnimatedSection } from "@/components/public/AnimatedSection"
 
 const eventCards = [
   {
     title: "Private Dining",
-    image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=2069&auto=format&fit=crop",
-    href: "/events/private-dining",
+    image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=1000&auto=format&fit=crop",
   },
   {
     title: "Celebrations",
-    image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=2069&auto=format&fit=crop",
-    href: "/events/celebrations",
+    image: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=1000&auto=format&fit=crop",
   },
   {
     title: "Workshops & Events",
-    image: "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=2069&auto=format&fit=crop",
-    href: "/events/workshops",
+    image: "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=1000&auto=format&fit=crop",
   },
 ]
 
@@ -35,30 +32,22 @@ export function EventsSection() {
               venue provides a stunning backdrop for life&apos;s most memorable moments.
             </p>
           </div>
-          <Link
-            href="/events"
-            className="inline-block px-8 py-2.5 bg-stone-900 dark:bg-stone-800 text-white text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-700 transition-colors shrink-0"
-          >
-            Read More
-          </Link>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
-          {eventCards.map((card) => (
-            <Link
-              key={card.title}
-              href={card.href}
-              className="group relative block aspect-[4/5] overflow-hidden bg-stone-200 dark:bg-stone-800"
-            >
-              <img
-                src={card.image}
-                alt={card.title}
-                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-6">
-                <h3 className="text-white text-lg font-serif font-normal">{card.title}</h3>
+          {eventCards.map((card, i) => (
+            <AnimatedSection key={card.title} delay={i * 150}>
+              <div className="group relative block aspect-4/5 overflow-hidden bg-stone-200 dark:bg-stone-800">
+                <img
+                  src={card.image}
+                  alt={card.title}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <h3 className="text-white text-lg font-serif font-normal">{card.title}</h3>
+                </div>
               </div>
-            </Link>
+            </AnimatedSection>
           ))}
         </div>
       </div>

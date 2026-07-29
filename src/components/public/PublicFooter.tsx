@@ -9,17 +9,6 @@ export function PublicFooter() {
             <span className="text-white dark:text-stone-100 text-lg font-serif font-normal tracking-wide">
               Le Palme
             </span>
-            <div className="flex gap-4 mt-6">
-              <a href="#" className="text-stone-500 dark:text-stone-600 hover:text-white dark:hover:text-stone-100 transition-colors">
-                <span className="text-xs font-sans uppercase tracking-wider">IG</span>
-              </a>
-              <a href="#" className="text-stone-500 dark:text-stone-600 hover:text-white dark:hover:text-stone-100 transition-colors">
-                <span className="text-xs font-sans uppercase tracking-wider">FB</span>
-              </a>
-              <a href="#" className="text-stone-500 dark:text-stone-600 hover:text-white dark:hover:text-stone-100 transition-colors">
-                <span className="text-xs font-sans uppercase tracking-wider">TA</span>
-              </a>
-            </div>
           </div>
           <div>
             <h4 className="text-white dark:text-stone-100 text-xs font-sans font-medium uppercase tracking-[0.15em] mb-5">Contact</h4>
@@ -32,25 +21,25 @@ export function PublicFooter() {
             </div>
           </div>
           <div>
-            <h4 className="text-white dark:text-stone-100 text-xs font-sans font-medium uppercase tracking-[0.15em] mb-5">About</h4>
+            <h4 className="text-white dark:text-stone-100 text-xs font-sans font-medium uppercase tracking-[0.15em] mb-5">Quick Links</h4>
             <div className="space-y-2.5 text-sm font-sans">
               <Link href="/rooms" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Rooms</Link>
               <Link href="/about" className="block hover:text-white dark:hover:text-stone-100 transition-colors">About</Link>
               <Link href="/experiences" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Experiences</Link>
+              <Link href="/booking/lookup" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Manage Booking</Link>
               <Link href="/contact" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Contact</Link>
             </div>
           </div>
-          <div>
+          {/* <div>
             <h4 className="text-white dark:text-stone-100 text-xs font-sans font-medium uppercase tracking-[0.15em] mb-5">Careers</h4>
             <div className="space-y-2.5 text-sm font-sans">
               <a href="#" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Work With Us</a>
               <a href="#" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Join Our Team</a>
             </div>
-          </div>
+          </div> */}
         </div>
-        <div className="mt-16 pt-8 border-t border-stone-800 dark:border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-sans text-stone-600 dark:text-stone-600">
+        <div className="mt-16 pt-8 border-t border-stone-800 dark:border-stone-800 flex flex-col sm:flex-row items-center justify-center gap-4 text-xs font-sans text-stone-600 dark:text-stone-600">
           <p>&copy; {new Date().getFullYear()} Le Palme Ahangama. All rights reserved.</p>
-          <p>Website by Le Palme</p>
         </div>
       </div>
     </footer>

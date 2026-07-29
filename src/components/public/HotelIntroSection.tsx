@@ -1,19 +1,20 @@
 import Link from "next/link"
+import { AnimatedSection } from "@/components/public/AnimatedSection"
 
 const cards = [
   {
     title: "Stay With Us",
-    image: "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=2070&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1000&auto=format&fit=crop",
     href: "/rooms",
   },
   {
     title: "Dine With Us",
-    image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=1000&auto=format&fit=crop",
     href: "/dine",
   },
   {
     title: "Events & Gatherings",
-    image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=2070&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=1000&auto=format&fit=crop",
     href: "/events",
   },
 ]
@@ -38,22 +39,23 @@ export function HotelIntroSection() {
         </Link>
       </div>
       <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
-        {cards.map((card) => (
-          <Link
-            key={card.title}
-            href={card.href}
-            className="group relative block aspect-[4/5] overflow-hidden bg-stone-200 dark:bg-stone-800"
-          >
-            <img
-              src={card.image}
-              alt={card.title}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-6">
-              <h3 className="text-white text-lg font-serif font-normal">{card.title}</h3>
-            </div>
-          </Link>
+        {cards.map((card, i) => (
+          <AnimatedSection key={card.title} delay={i * 150}>
+            <Link
+              href={card.href}
+              className="group relative block aspect-[4/5] overflow-hidden bg-stone-200 dark:bg-stone-800"
+            >
+              <img
+                src={card.image}
+                alt={card.title}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6">
+                <h3 className="text-white text-lg font-serif font-normal">{card.title}</h3>
+              </div>
+            </Link>
+          </AnimatedSection>
         ))}
       </div>
     </section>

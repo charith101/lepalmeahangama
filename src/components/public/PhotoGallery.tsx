@@ -1,18 +1,18 @@
 const photos = [
   {
-    src: "https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?q=80&w=2070&auto=format&fit=crop",
+    src: "https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?q=80&w=1000&auto=format&fit=crop",
     alt: "Tropical sunset over the ocean",
   },
   {
-    src: "https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=2069&auto=format&fit=crop",
+    src: "https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=1000&auto=format&fit=crop",
     alt: "Surfing at sunset",
   },
   {
-    src: "https://images.unsplash.com/photo-1571772996212-2f6f2a5e6f4e?q=80&w=2070&auto=format&fit=crop",
+    src: "https://images.unsplash.com/photo-1571772996212-2f6f2a5e6f4e?q=80&w=1000&auto=format&fit=crop",
     alt: "Palm trees at the beach",
   },
   {
-    src: "https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=2025&auto=format&fit=crop",
+    src: "https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1000&auto=format&fit=crop",
     alt: "Beachfront pool",
   },
 ]

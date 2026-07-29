@@ -1,12 +1,59 @@
-import type { Metadata } from "next"
-import { Mail, Phone, MapPin } from "lucide-react"
+"use client"
 
-export const metadata: Metadata = {
-  title: "Contact Us",
-  description: "Get in touch with Le Palme Ahangama. Located on Ahangama Beach Road, Sri Lanka.",
-}
+import { useState } from "react"
+import { Mail, Phone, MapPin } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 export default function ContactPage() {
+  const supabase = createClient()
+  const [loading, setLoading] = useState(false)
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [message, setMessage] = useState("")
+  const [sent, setSent] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      toast.error("All fields are required")
+      return
+    }
+    setLoading(true)
+    const { error } = await supabase.from("contact_messages").insert({
+      name: name.trim(),
+      email: email.trim(),
+      message: message.trim(),
+    })
+    setLoading(false)
+    if (error) {
+      toast.error("Failed to send message. Please try again.")
+      return
+    }
+    setSent(true)
+    setName("")
+    setEmail("")
+    setMessage("")
+    toast.success("Message sent! We'll get back to you soon.")
+  }
+
+  if (sent) {
+    return (
+      <div className="min-h-screen pt-24 pb-16">
+        <section className="px-6 py-20 sm:py-28">
+          <div className="max-w-6xl mx-auto text-center">
+            <h1 className="text-[clamp(2rem,4vw,3.5rem)] font-serif font-normal leading-[1.1] text-stone-900 dark:text-stone-100 mb-4">
+              Thank You
+            </h1>
+            <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans">
+              Your message has been sent. We&apos;ll get back to you soon.
+            </p>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <section className="px-6 py-20 sm:py-28">
@@ -64,7 +111,7 @@ export default function ContactPage() {
             </div>
 
             <div>
-              <form className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label htmlFor="name" className="block text-xs font-sans font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1.5">
                     Name
@@ -72,8 +119,11 @@ export default function ContactPage() {
                   <input
                     id="name"
                     type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     className="w-full px-4 py-3 border border-stone-200 dark:border-stone-700 text-sm font-sans text-stone-800 dark:text-stone-200 bg-white dark:bg-stone-800 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:border-stone-400 dark:focus:border-stone-500 transition-colors"
                     placeholder="Your name"
+                    required
                   />
                 </div>
                 <div>
@@ -83,8 +133,11 @@ export default function ContactPage() {
                   <input
                     id="email"
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-3 border border-stone-200 dark:border-stone-700 text-sm font-sans text-stone-800 dark:text-stone-200 bg-white dark:bg-stone-800 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:border-stone-400 dark:focus:border-stone-500 transition-colors"
                     placeholder="your@email.com"
+                    required
                   />
                 </div>
                 <div>
@@ -94,15 +147,19 @@ export default function ContactPage() {
                   <textarea
                     id="message"
                     rows={5}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
                     className="w-full px-4 py-3 border border-stone-200 dark:border-stone-700 text-sm font-sans text-stone-800 dark:text-stone-200 bg-white dark:bg-stone-800 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:border-stone-400 dark:focus:border-stone-500 transition-colors resize-none"
                     placeholder="How can we help you?"
+                    required
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full px-8 py-3 bg-stone-900 dark:bg-stone-800 text-white text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-700 transition-colors"
+                  disabled={loading}
+                  className="w-full px-8 py-3 bg-stone-900 dark:bg-stone-800 text-white text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-700 transition-colors disabled:opacity-50"
                 >
-                  Send Message
+                  {loading ? "Sending..." : "Send Message"}
                 </button>
               </form>
             </div>

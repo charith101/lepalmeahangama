@@ -9,25 +9,25 @@ export const metadata: Metadata = {
 const experiences = [
   {
     title: "Surfing",
-    image: "https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=2069&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=1000&auto=format&fit=crop",
     description:
       "Ahangama is home to some of Sri Lanka's finest surf breaks. Whether you're a beginner catching your first wave or an experienced surfer seeking the perfect swell, our team can arrange lessons, board rentals, and guided sessions to the best spots along the coast.",
   },
   {
     title: "Cycling & Nature",
-    image: "https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=2070&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=1000&auto=format&fit=crop",
     description:
       "Explore the lush countryside surrounding Ahangama by bicycle. Ride through emerald rice paddies, visit traditional villages, and discover hidden temples. Our guided cycling tours offer an authentic glimpse into daily life in southern Sri Lanka.",
   },
   {
     title: "Wildlife & Safari",
-    image: "https://images.unsplash.com/photo-1603789764099-52b21a871336?q=80&w=1740&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1603789764099-52b21a871336?q=80&w=1000&auto=format&fit=crop",
     description:
       "Embark on a safari to Yala National Park, home to leopards, elephants, and a stunning array of birdlife. Closer to home, visit turtle hatcheries, watch whales off the coast, or simply observe the vibrant marine life while snorkeling.",
   },
   {
     title: "Cultural Tours",
-    image: "https://images.unsplash.com/photo-1704797390682-76479a29dc9a?q=80&w=1740&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1704797390682-76479a29dc9a?q=80&w=1000&auto=format&fit=crop",
     description:
       "Dive into Sri Lanka's rich cultural heritage with visits to the historic Galle Fort, tea plantations in the hill country, and traditional cooking classes. Our concierge curates each experience to give you a meaningful connection to the island's traditions.",
   },

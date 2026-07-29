@@ -105,7 +105,7 @@ export default async function ConfirmationPage({ params }: Props) {
         <div className="rounded-lg border border-hairline-light dark:border-hairline-dark p-6 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Reference</span>
-            <span className="text-sm font-mono text-ink dark:text-on-primary">{booking.id.slice(0, 8).toUpperCase()}</span>
+            <span className="text-sm font-mono text-ink dark:text-on-primary">{(b.group_booking_id ?? booking.id).slice(0, 8).toUpperCase()}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Status</span>

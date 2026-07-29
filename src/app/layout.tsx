@@ -29,7 +29,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Le Palme Ahangama — Beachfront Hotel in Sri Lanka",
+    default: "Le Palme Ahangama",
     template: "%s | Le Palme Ahangama",
   },
   description: "Beachfront hotel in Ahangama, Sri Lanka. Deluxe & Budget rooms, surfboard & bike rentals, airport transfers. Book direct for best rates.",

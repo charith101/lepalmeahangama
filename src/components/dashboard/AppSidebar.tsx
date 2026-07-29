@@ -1,7 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
   CalendarDays,
@@ -12,9 +13,21 @@ import {
   Car,
   Settings,
   Activity,
+  LogOutIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { createClient } from "@/lib/supabase/client"
 
 const navItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "receptionist"] },
@@ -56,6 +69,45 @@ function SidebarNav({ role, pathname, onNavClick }: { role: string; pathname: st
   )
 }
 
+function LogoutButton() {
+  const router = useRouter()
+  const supabase = createClient()
+  const [open, setOpen] = useState(false)
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push("/auth/login")
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <button
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
+          />
+        }
+      >
+        <LogOutIcon className="size-4 shrink-0" />
+        Logout
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Logout</DialogTitle>
+          <DialogDescription>Are you sure you want to logout?</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={handleLogout}>Logout</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function AppSidebar({
   role,
   open,
@@ -67,20 +119,28 @@ export function AppSidebar({
 }) {
   const pathname = usePathname()
 
+  const sidebarContent = (
+    <div className="flex h-full flex-col">
+      <div className="flex h-14 items-center border-b px-4 font-heading text-base font-medium shrink-0">
+        Le Palme
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        <SidebarNav role={role} pathname={pathname} onNavClick={() => onOpenChange(false)} />
+      </div>
+      <div className="border-t p-3">
+        <LogoutButton />
+      </div>
+    </div>
+  )
+
   return (
     <>
       <aside className="hidden md:flex w-56 shrink-0 flex-col border-r bg-sidebar">
-        <div className="flex h-14 items-center border-b px-4 font-heading text-base font-medium">
-          Le Palme
-        </div>
-        <SidebarNav role={role} pathname={pathname} onNavClick={() => onOpenChange(false)} />
+        {sidebarContent}
       </aside>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="left" className="w-56 p-0">
-          <div className="flex h-14 items-center border-b px-4 font-heading text-base font-medium">
-            Le Palme
-          </div>
-          <SidebarNav role={role} pathname={pathname} onNavClick={() => onOpenChange(false)} />
+          {sidebarContent}
         </SheetContent>
       </Sheet>
     </>

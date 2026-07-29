@@ -32,7 +32,7 @@ export function RoomDetail({ id, name, base_price_usd, max_occupancy, descriptio
 
         <div className="grid md:grid-cols-5 gap-10">
           <div className="md:col-span-3">
-            <div className="relative aspect-[16/9] bg-stone-100 dark:bg-stone-800 overflow-hidden mb-8 border border-stone-200 dark:border-stone-800">
+            <div className="relative aspect-video bg-stone-100 dark:bg-stone-800 overflow-hidden mb-8 border border-stone-200 dark:border-stone-800">
               {image_url ? (
                 <img
                   src={image_url}

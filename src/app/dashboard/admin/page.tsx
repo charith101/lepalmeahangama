@@ -4,7 +4,7 @@ import { AdminPanel } from "@/components/dashboard/AdminPanel"
 export default async function AdminPage() {
   const supabase = await createClient()
 
-  const [profilesRes, categoriesRes, settingsRes, roomsRes, unitsRes, maintRes] = await Promise.all([
+  const [profilesRes, categoriesRes, settingsRes, roomsRes, unitsRes, maintRes, contactRes] = await Promise.all([
     supabase.from("profiles").select("*").order("full_name"),
     supabase.from("room_categories").select("*").order("name"),
     supabase.from("settings").select("*").single(),
@@ -14,6 +14,7 @@ export default async function AdminPage() {
       .select("*, rooms(room_number, room_categories(name)), profiles!reported_by_staff_id(full_name)")
       .not("status", "in", '("resolved","closed")')
       .order("created_at", { ascending: false }),
+    supabase.from("contact_messages").select("*").order("created_at", { ascending: false }),
   ])
 
   return (
@@ -26,6 +27,7 @@ export default async function AdminPage() {
         rooms={roomsRes.data ?? []}
         units={unitsRes.data ?? []}
         maintenance={maintRes.data ?? []}
+        contactMessages={contactRes.data ?? []}
       />
     </div>
   )

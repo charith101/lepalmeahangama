@@ -19,7 +19,7 @@ function slugify(text: string) {
 export function RoomCategoryCard({ name, base_price_usd, max_occupancy, image_url }: RoomCategory) {
   return (
     <div className="flex flex-col bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800">
-      <div className="relative aspect-[16/9] bg-stone-100 dark:bg-stone-800 overflow-hidden">
+      <div className="relative aspect-video bg-stone-100 dark:bg-stone-800 overflow-hidden">
         {image_url ? (
           <Image
             src={image_url}

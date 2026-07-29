@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { CalendarIcon, TreePalm, ChevronDown } from "lucide-react"
 import { format } from "date-fns"
@@ -13,6 +13,10 @@ export function HeroSection() {
   const [checkOut, setCheckOut] = useState<Date | undefined>()
   const [guests, setGuests] = useState("2")
 
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
+
   function handleSearch() {
     const params = new URLSearchParams()
     if (checkIn) params.set("checkIn", format(checkIn, "yyyy-MM-dd"))
@@ -24,10 +28,10 @@ export function HeroSection() {
   return (
     <header className="relative min-h-screen flex flex-col overflow-hidden bg-black">
       <div
-        className="absolute inset-0 bg-cover bg-center"
+        className="absolute inset-0 bg-cover bg-center animate-[pulse_5s_ease-in-out_infinite]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(0,0,0,0.01), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1535262412227-85541e910204?q=90&w=2560&auto=format&fit=crop')",
+            "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.08)), url('https://images.unsplash.com/photo-1535262412227-85541e910204?q=90&w=2560&auto=format&fit=crop')",
         }}
       />
 
@@ -40,34 +44,34 @@ export function HeroSection() {
 
 
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <TreePalm className="size-8 sm:size-9 text-white/80 mb-5" strokeWidth={1.5} />
+        <TreePalm className={`size-10 sm:size-9 text-white/80 mb-2 mt-6 transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`} strokeWidth={1.5} />
 
         <h1 className="font-serif font-normal leading-[0.95] tracking-tight mb-6">
           <span
-            className="block text-white text-[clamp(3.5rem,11vw,8rem)]"
+            className={`block text-white text-[clamp(3.5rem,11vw,8rem)] transition-all duration-700 delay-100 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
             style={{ textShadow: "0 4px 40px rgba(0,0,0,0.35), 0 2px 10px rgba(0,0,0,0.25)" }}
           >
             Le Palme
           </span>
-          <span className="block text-white/80 text-[clamp(1.1rem,2.5vw,1.75rem)] tracking-[0.4em] uppercase font-sans mt-3">
+          <span className={`block text-white/80 text-[clamp(1.1rem,2.5vw,1.75rem)] tracking-[0.4em] uppercase font-sans mt-3 transition-all duration-700 delay-200 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
             Ahangama
           </span>
         </h1>
 
         
 
-        <p className="max-w-md text-white/70 text-sm sm:text-base font-sans leading-relaxed">
+        <p className={`max-w-md text-white/80 text-sm sm:text-base font-sans leading-relaxed -mb-6 transition-all duration-1000 delay-300 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           A beachfront retreat where the reef break meets your doorstep.
         </p>
       </div>
 
       {/* Scroll cue so the lower-middle space feels purposeful */}
-      <div className="relative z-10 hidden sm:flex justify-center pb-6">
+      <div className={`relative z-10 hidden sm:flex justify-center pb-6 transition-all duration-700 delay-[400ms] ${mounted ? "opacity-100" : "opacity-0"}`}>
         <ChevronDown className="size-5 text-white/50 animate-bounce" />
       </div>
 
       {/* Booking bar */}
-      <div className="relative z-10 w-full px-6 pb-12 sm:pb-16">
+      <div className={`relative z-10 w-full px-6 pb-12 sm:pb-16 transition-all duration-700 delay-[500ms] ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
         <div className="max-w-4xl mx-auto bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm px-6 py-5 sm:px-8 sm:py-6 shadow-2xl">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
             <div className="flex-1 min-w-0">

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { toast } from "sonner"
-import { SaveIcon, PlusIcon, Trash2Icon, CheckCircle2Icon } from "lucide-react"
+import { SaveIcon, PlusIcon, Trash2Icon, CheckCircle2Icon, HomeIcon, MailIcon } from "lucide-react"
 import type { Database } from "@/lib/supabase/database.types"
 import { pricingUpdateSchema, settingsSchema, addUnitSchema } from "@/lib/validations"
 
@@ -23,6 +23,7 @@ type MaintenanceRequest = Database["public"]["Tables"]["maintenance_requests"]["
   rooms: { room_number: string; room_categories: { name: string } | null } | null
   profiles: { full_name: string | null } | null
 }
+type ContactMessage = Database["public"]["Tables"]["contact_messages"]["Row"]
 
 export function AdminPanel({
   profiles: initialProfiles,
@@ -31,6 +32,7 @@ export function AdminPanel({
   rooms: initialRooms,
   units: initialUnits,
   maintenance: initialMaintenance,
+  contactMessages: initialContactMessages,
 }: {
   profiles: Profile[]
   categories: RoomCategory[]
@@ -38,6 +40,7 @@ export function AdminPanel({
   rooms: Room[]
   units: EquipmentUnit[]
   maintenance: MaintenanceRequest[]
+  contactMessages: ContactMessage[]
 }) {
   const supabase = createClient()
 
@@ -47,6 +50,7 @@ export function AdminPanel({
   const [rooms, setRooms] = useState(initialRooms)
   const [units, setUnits] = useState(initialUnits)
   const [maintenance, setMaintenance] = useState(initialMaintenance)
+  const [contactMessages, setContactMessages] = useState(initialContactMessages)
 
   const [editPrices, setEditPrices] = useState<Record<string, number>>(
     Object.fromEntries(categories.map((c) => [c.id, c.base_price_usd]))
@@ -126,6 +130,31 @@ export function AdminPanel({
     toast.success("Unit retired")
   }
 
+  // Room management
+  const [newRoomNumber, setNewRoomNumber] = useState("")
+  const [newRoomCategory, setNewRoomCategory] = useState("")
+
+  async function addRoom() {
+    if (!newRoomNumber.trim()) { toast.error("Room number is required"); return }
+    if (!newRoomCategory) { toast.error("Category is required"); return }
+    const { data, error } = await supabase.from("rooms").insert({
+      room_number: newRoomNumber.trim(),
+      category_id: newRoomCategory,
+    }).select("*, category:room_categories(*)").single()
+    if (error) { toast.error(error.message); return }
+    setRooms((prev) => [...prev, data])
+    setNewRoomNumber("")
+    setNewRoomCategory("")
+    toast.success("Room added")
+  }
+
+  // Contact messages
+  async function toggleMessageRead(id: string, read: boolean) {
+    const { error } = await supabase.from("contact_messages").update({ read }).eq("id", id)
+    if (error) { toast.error(error.message); return }
+    setContactMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read } : m)))
+  }
+
   return (
     <div className="space-y-6">
       {/* 1. Staff Accounts */}
@@ -161,7 +190,7 @@ export function AdminPanel({
         </CardContent>
       </Card>
 
-      {/* 2. Room Categories */}
+      {/* 2. Room Categories — Pricing */}
       <Card>
         <CardHeader><CardTitle>Room Categories — Pricing</CardTitle></CardHeader>
         <CardContent>
@@ -189,37 +218,14 @@ export function AdminPanel({
         </CardFooter>
       </Card>
 
-      {/* 3. Hotel Settings */}
+      {/* 3. Room Management */}
       <Card>
-        <CardHeader><CardTitle>Hotel Settings</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Check-in Time</Label>
-              <Input type="time" value={settings.check_in_time.slice(0, 5)} onChange={(e) => setSettings({ ...settings, check_in_time: e.target.value + ":00" })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Check-out Time</Label>
-              <Input type="time" value={settings.check_out_time.slice(0, 5)} onChange={(e) => setSettings({ ...settings, check_out_time: e.target.value + ":00" })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Surcharge %</Label>
-              <Input type="number" step="0.1" value={settings.surcharge_pct} onChange={(e) => setSettings({ ...settings, surcharge_pct: parseFloat(e.target.value) || 0 })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Min Deposit %</Label>
-              <Input type="number" step="1" value={settings.min_deposit_pct} onChange={(e) => setSettings({ ...settings, min_deposit_pct: parseFloat(e.target.value) || 0 })} />
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button onClick={saveSettings}><SaveIcon /> Save Settings</Button>
-        </CardFooter>
-      </Card>
-
-      {/* 4. Room Maintenance */}
-      <Card>
-        <CardHeader><CardTitle>Room Maintenance</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <HomeIcon className="size-4" />
+            Rooms
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -250,6 +256,51 @@ export function AdminPanel({
             </TableBody>
           </Table>
         </CardContent>
+        <CardFooter className="flex items-center gap-3">
+          <Input
+            placeholder="Room number"
+            value={newRoomNumber}
+            onChange={(e) => setNewRoomNumber(e.target.value)}
+            className="w-40"
+          />
+          <Select value={newRoomCategory} onValueChange={(v) => setNewRoomCategory(v ?? "")}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectContent>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={addRoom}><PlusIcon /> Add Room</Button>
+        </CardFooter>
+      </Card>
+
+      {/* 4. Hotel Settings */}
+      <Card>
+        <CardHeader><CardTitle>Hotel Settings</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Check-in Time</Label>
+              <Input type="time" value={settings.check_in_time.slice(0, 5)} onChange={(e) => setSettings({ ...settings, check_in_time: e.target.value + ":00" })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Check-out Time</Label>
+              <Input type="time" value={settings.check_out_time.slice(0, 5)} onChange={(e) => setSettings({ ...settings, check_out_time: e.target.value + ":00" })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Surcharge %</Label>
+              <Input type="number" step="0.1" value={settings.surcharge_pct} onChange={(e) => setSettings({ ...settings, surcharge_pct: parseFloat(e.target.value) || 0 })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Min Deposit %</Label>
+              <Input type="number" step="1" value={settings.min_deposit_pct} onChange={(e) => setSettings({ ...settings, min_deposit_pct: parseFloat(e.target.value) || 0 })} />
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={saveSettings}><SaveIcon /> Save Settings</Button>
+        </CardFooter>
       </Card>
 
       {/* 5. Maintenance Requests */}
@@ -343,13 +394,71 @@ export function AdminPanel({
           <Select value={newUnitCategory} onValueChange={(v) => setNewUnitCategory(v ?? "")}>
             <SelectTrigger className="w-48"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
-              {initialCategories.map((c) => (
+              {categories.map((c) => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Button onClick={addUnit}><PlusIcon /> Add Unit</Button>
         </CardFooter>
+      </Card>
+
+      {/* 7. Contact Messages */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MailIcon className="size-4" />
+            Contact Messages
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Message</TableHead>
+                <TableHead className="w-24">Status</TableHead>
+                <TableHead className="w-20" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {contactMessages.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-6">No messages yet</TableCell>
+                </TableRow>
+              ) : (
+                contactMessages.map((m) => (
+                  <TableRow key={m.id} className={!m.read ? "bg-muted/30" : ""}>
+                    <TableCell className="text-sm whitespace-nowrap">
+                      {new Date(m.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="font-medium">{m.name}</TableCell>
+                    <TableCell className="text-sm">{m.email}</TableCell>
+                    <TableCell className="max-w-64 truncate text-sm text-muted-foreground">
+                      {m.message}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={m.read ? "secondary" : "default"}>
+                        {m.read ? "Read" : "New"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant={m.read ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => toggleMessageRead(m.id, !m.read)}
+                      >
+                        {m.read ? "Mark unread" : "Mark read"}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
       </Card>
     </div>
   )

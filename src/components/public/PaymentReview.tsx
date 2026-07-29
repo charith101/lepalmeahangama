@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { CreditCard } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
-import { createMultiRoomBooking } from "@/lib/actions/bookings"
+import { createMultiRoomBooking, createPayHereBooking } from "@/lib/actions/bookings"
 import { getAvailableRooms } from "@/lib/actions/rooms"
 import { getAvailableUnits } from "@/lib/actions/equipment"
 import { EQUIPMENT_SURFBOARD, EQUIPMENT_BICYCLE, ROUTE_CMB } from "@/lib/constants"
@@ -106,6 +106,77 @@ export function PaymentReview({
     }
   }
 
+  async function handlePayhere() {
+    setStatus("loading")
+    setError("")
+    try {
+      const { allRooms, equipment, transfer } = await checkAndBuildData()
+      setStatus("booking")
+      const result = await createPayHereBooking({
+        guest: { full_name: guest.fullName, email: guest.email || undefined, phone: guest.phone || undefined, nationality: guest.nationality || undefined, nic_or_passport: guest.nic_passport || undefined },
+        roomSelections: allRooms,
+        grand_total_usd: grandTotal,
+        equipment: equipment.length > 0 ? equipment : undefined,
+        transfer,
+      })
+      if (result.error) { setError(result.error); setStatus("idle"); return }
+      const { bookingIds, groupBookingId, grandTotal: total } = result.data!
+      const orderId = `BOOK-${groupBookingId.slice(0, 8).toUpperCase()}`
+      const currency = "USD"
+      const amount = total.toFixed(2)
+
+      const hashRes = await fetch("/api/payhere/hash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderId, amount, currency }),
+      })
+      if (!hashRes.ok) { setError("Failed to initialize payment"); setStatus("idle"); return }
+      const { hash, merchant_id } = await hashRes.json()
+
+      onSuccess?.()
+
+      const form = document.createElement("form")
+      form.method = "POST"
+      form.action = "https://sandbox.payhere.lk/pay/checkout"
+      form.style.display = "none"
+
+      const fields: Record<string, string> = {
+        merchant_id,
+        return_url: `${window.location.origin}/api/payhere/return?booking_id=${bookingIds[0]}`,
+        cancel_url: `${window.location.origin}/api/payhere/cancel`,
+        notify_url: `${window.location.origin}/api/payhere/notify`,
+        order_id: orderId,
+        items: "Le Palme Ahangama — Room Booking",
+        currency,
+        amount,
+        hash,
+        first_name: guest.fullName.split(" ")[0] || guest.fullName,
+        last_name: guest.fullName.split(" ").slice(1).join(" ") || "Guest",
+        email: guest.email,
+        phone: guest.phone,
+        address: "Le Palme Ahangama",
+        city: "Ahangama",
+        country: "Sri Lanka",
+        custom_1: groupBookingId,
+        custom_2: bookingIds[0],
+      }
+
+      for (const [k, v] of Object.entries(fields)) {
+        const input = document.createElement("input")
+        input.type = "hidden"
+        input.name = k
+        input.value = v
+        form.appendChild(input)
+      }
+
+      document.body.appendChild(form)
+      form.submit()
+    } catch {
+      setError("Something went wrong. Please try again.")
+      setStatus("idle")
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -161,7 +232,7 @@ export function PaymentReview({
           <div className="flex items-start gap-3">
             <CreditCard className="size-5 shrink-0 mt-0.5 text-stone-500 dark:text-stone-400" />
             <div className="flex-1">
-              <span className="font-medium text-sm font-sans text-stone-900 dark:text-stone-100">Card</span>
+              <span className="font-medium text-sm font-sans text-stone-900 dark:text-stone-100">Pay with Polar</span>
               <p className="text-xs font-sans text-stone-500 dark:text-stone-400 mt-0.5">
                 Pay instantly online via Polar. International processing fees may apply.
               </p>
@@ -175,7 +246,31 @@ export function PaymentReview({
             disabled={status !== "idle"}
             className="w-full py-2.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-200 transition-colors disabled:opacity-50 mt-3"
           >
-            {status === "loading" ? "Checking availability..." : status === "booking" ? "Creating booking..." : "Pay with Card"}
+            {status === "loading" ? "Checking availability..." : status === "booking" ? "Creating booking..." : "Pay with Polar"}
+          </button>
+        </div>
+
+        <div className="border border-stone-200 dark:border-stone-800 p-4">
+          <div className="flex items-start gap-3">
+            <svg className="size-5 shrink-0 mt-0.5 text-stone-500 dark:text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <path d="M12 9v6" />
+              <path d="M9 12h6" />
+            </svg>
+            <div className="flex-1">
+              <span className="font-medium text-sm font-sans text-stone-900 dark:text-stone-100">Pay with PayHere</span>
+              <p className="text-xs font-sans text-stone-500 dark:text-stone-400 mt-0.5">
+                Secure local payment via PayHere. Visa, Mastercard, and Sri Lankan banking.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handlePayhere}
+            disabled={status !== "idle"}
+            className="w-full py-2.5 bg-emerald-700 text-white text-sm font-sans font-medium hover:bg-emerald-800 transition-colors disabled:opacity-50 mt-3"
+          >
+            {status === "loading" ? "Checking availability..." : status === "booking" ? "Creating booking..." : "Pay with PayHere"}
           </button>
         </div>
       </div>
