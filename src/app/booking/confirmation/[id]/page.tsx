@@ -55,7 +55,7 @@ export default async function ConfirmationPage({ params }: Props) {
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, check_in, check_out, status, room_total_usd, created_at, rooms(room_number, room_categories(name)), guests(full_name, email, phone)")
+    .select("id, check_in, check_out, status, room_total_usd, created_at, group_booking_id, rooms(room_number, room_categories(name)), guests(full_name, email, phone)")
     .eq("id", id)
     .single()
 
