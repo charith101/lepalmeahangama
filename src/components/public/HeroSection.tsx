@@ -144,9 +144,15 @@ export function HeroSection() {
             <div className="sm:pb-0">
               <button
                 onClick={handleSearch}
-                className="block w-full sm:w-auto px-8 py-2.5 bg-stone-900 dark:bg-stone-800 text-white text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-700 transition-colors text-center whitespace-nowrap h-10"
+                disabled={!datesValid}
+                className={cn(
+                  "block w-full sm:w-auto px-8 py-2.5 text-white text-sm font-sans font-medium transition-colors text-center whitespace-nowrap h-10",
+                  datesValid
+                    ? "bg-stone-900 dark:bg-stone-800 hover:bg-stone-800 dark:hover:bg-stone-700"
+                    : "bg-stone-400 dark:bg-stone-600 cursor-not-allowed"
+                )}
               >
-                Check Availability
+                {!checkIn || !checkOut ? "Select dates" : checkOut <= checkIn ? "Invalid dates" : "Check Availability"}
               </button>
             </div>
           </div>
