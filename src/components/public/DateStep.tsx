@@ -484,10 +484,10 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
 
       <button
         onClick={handleSubmit}
-        className="w-full py-2.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-200 transition-colors"
-        disabled={selections.length === 0}
+        className="w-full py-2.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        disabled={selections.length === 0 || !datesValid || isAnyAvailabilityLoading}
       >
-        Next: Add Extras
+        {!checkIn || !checkOut ? "Select dates to continue" : isAnyAvailabilityLoading ? "Checking availability..." : "Next: Add Extras"}
       </button>
     </div>
   )
