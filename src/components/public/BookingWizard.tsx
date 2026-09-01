@@ -18,7 +18,6 @@ type VehicleCategory = { id: string; name: string; pricePerDay: number; subtitle
 
 type PricingData = {
   surfboardPricePerDay: number
-  bicyclePricePerDay: number
   transferPrice: number
   surchargePct: number
   motorbikes: VehicleCategory[]
@@ -43,9 +42,8 @@ type WizardData = {
 }
 
 const defaultExtras: ExtrasData = {
-  surfboardQty: 0, bicycleQty: 0,
+  surfboardQty: 0,
   surfboardStart: "", surfboardEnd: "",
-  bicycleStart: "", bicycleEnd: "",
   items: [],
   transferNeeded: false, transferDirection: "arrival",
   flightNumber: "", transferTime: "",
@@ -68,7 +66,6 @@ const STORAGE_KEY = "booking_wizard_data"
 function extrasPricing(p: PricingData): ExtrasPricing {
   return {
     surfboardPricePerDay: p.surfboardPricePerDay,
-    bicyclePricePerDay: p.bicyclePricePerDay,
     motorbikes: p.motorbikes,
     cars: p.cars,
   }
@@ -102,7 +99,6 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
         if (saved) {
           const parsed = JSON.parse(saved)
           if (parsed.data) {
-            // ponytail: merge so older saved sessions get boardPlan + per-type dates
             return {
               ...fallback,
               ...parsed.data,
@@ -115,6 +111,8 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
     }
     return fallback
   })
+
+  const [liveExtras, setLiveExtras] = useState<ExtrasData | null>(null)
 
   function clearStorage() {
     try { sessionStorage.removeItem(STORAGE_KEY) } catch {}
@@ -147,29 +145,30 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
     return BOARD_PRICE_PER_NIGHT(data.boardPlan) * nights * totalRooms
   }, [data.boardPlan, nights, totalRooms])
 
+  // Use live extras when on step 3, otherwise use saved data
+  const activeExtras = step === 3 && liveExtras ? liveExtras : data.extras
+
   const equipmentTotal = useMemo(() => {
-    const surfDays = rentalDays(data.extras.surfboardStart, data.extras.surfboardEnd, nights)
-    const bikeDays = rentalDays(data.extras.bicycleStart, data.extras.bicycleEnd, nights)
-    const surfTotal = data.extras.surfboardQty * surfboardTotalForDays(surfDays, pricing.surfboardPricePerDay, SURFBOARD_TIERS)
-    const bikeTotal = data.extras.bicycleQty * pricing.bicyclePricePerDay * bikeDays
-    return surfTotal + bikeTotal
-  }, [data.extras.surfboardQty, data.extras.surfboardStart, data.extras.surfboardEnd, data.extras.bicycleQty, data.extras.bicycleStart, data.extras.bicycleEnd, pricing.surfboardPricePerDay, pricing.bicyclePricePerDay, nights])
+    const surfDays = rentalDays(activeExtras.surfboardStart, activeExtras.surfboardEnd, nights)
+    const surfTotal = activeExtras.surfboardQty * surfboardTotalForDays(surfDays, pricing.surfboardPricePerDay, SURFBOARD_TIERS)
+    return surfTotal
+  }, [activeExtras.surfboardQty, activeExtras.surfboardStart, activeExtras.surfboardEnd, pricing.surfboardPricePerDay, nights])
 
   const vehiclesTotal = useMemo(() => {
     const lookup = new Map<string, VehicleCategory>()
     for (const m of pricing.motorbikes) lookup.set(m.id, m)
     for (const c of pricing.cars) lookup.set(c.id, c)
-    return data.extras.items.reduce((sum, it) => {
+    return activeExtras.items.reduce((sum, it) => {
       const cat = lookup.get(it.categoryId)
       if (!cat) return sum
       const days = rentalDays(it.start, it.end, nights)
       return sum + it.qty * cat.pricePerDay * days
     }, 0)
-  }, [data.extras.items, pricing.motorbikes, pricing.cars, nights])
+  }, [activeExtras.items, pricing.motorbikes, pricing.cars, nights])
 
   const transferTotal = useMemo(() => {
-    return data.extras.transferNeeded ? pricing.transferPrice : 0
-  }, [data.extras.transferNeeded, pricing.transferPrice])
+    return activeExtras.transferNeeded ? pricing.transferPrice : 0
+  }, [activeExtras.transferNeeded, pricing.transferPrice])
 
   const grandTotal = useMemo(() => {
     const subtotal = roomTotal + boardTotal + equipmentTotal + vehiclesTotal + transferTotal
@@ -276,13 +275,17 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
         <ExtrasStep
           defaultCheckIn={data.checkIn}
           defaultCheckOut={data.checkOut}
+          nights={nights}
           pricing={extrasPricing(pricing)}
+          currentTotal={roomTotal + boardTotal}
+          onChange={(extras) => setLiveExtras(extras)}
           initialData={data.extras}
           onNext={(extras) => {
             updateData({ extras })
+            setLiveExtras(null)
             setStep(4)
           }}
-          onBack={() => setStep(2)}
+          onBack={() => { setLiveExtras(null); setStep(2) }}
         />
       )}
 
