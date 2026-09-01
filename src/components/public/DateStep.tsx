@@ -356,7 +356,14 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
                             {a?.loading && <span className="text-xs font-sans text-stone-500 dark:text-stone-400 animate-pulse">Checking...</span>}
                             {(() => {
                               if (!a || a.loading || a.count === null) return null
-                              return (
+  const datesValid = checkIn !== undefined && checkOut !== undefined && checkOut > checkIn
+  const isAnyAvailabilityLoading = selections.some((sel) => {
+    if (!checkIn || !checkOut) return false
+    const key = `${sel.categoryId}_${format(checkIn, "yyyy-MM-dd")}_${format(checkOut, "yyyy-MM-dd")}`
+    return avail[key]?.loading
+  })
+
+  return (
                                 <span className={cn(
                                   "text-xs font-sans px-2 py-0.5 font-medium",
                                   a.count > 0 ? "bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300" : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
