@@ -5,8 +5,11 @@ import { formatCurrency, rentalDays } from "@/lib/utils"
 import { createPayHereBooking } from "@/lib/actions/bookings"
 import { getAvailableRooms } from "@/lib/actions/rooms"
 import { getAvailableUnits } from "@/lib/actions/equipment"
-import { EQUIPMENT_SURFBOARD, EQUIPMENT_BICYCLE, ROUTE_CMB, BOARD_LABEL, BOARD_PRICE_PER_NIGHT, type BoardPlan } from "@/lib/constants"
+import { EQUIPMENT_SURFBOARD, EQUIPMENT_BICYCLE, ROUTE_CMB, surfboardTotalForDays, SURFBOARD_TIERS, BOARD_LABEL, BOARD_PRICE_PER_NIGHT } from "@/lib/constants"
+import type { BoardPlan } from "@/lib/constants"
 import type { RoomSelection } from "./DateStep"
+
+type VehicleCategory = { id: string; name: string; pricePerDay: number; subtitle?: string }
 
 type PaymentReviewProps = {
   roomSelections: RoomSelection[]
@@ -16,6 +19,7 @@ type PaymentReviewProps = {
   roomTotal: number
   boardTotal: number
   equipmentTotal: number
+  vehiclesTotal: number
   transferTotal: number
   surchargePct: number
   grandTotal: number
@@ -24,10 +28,17 @@ type PaymentReviewProps = {
     surfboardQty: number; bicycleQty: number
     surfboardStart: string; surfboardEnd: string
     bicycleStart: string; bicycleEnd: string
+    items: Array<{ categoryId: string; qty: number; start: string; end: string }>
     transferNeeded: boolean; transferDirection: string
     flightNumber: string; transferTime: string
   }
-  pricing: { surfboardPricePerDay: number; bicyclePricePerDay: number; transferPrice: number }
+  pricing: {
+    surfboardPricePerDay: number
+    bicyclePricePerDay: number
+    transferPrice: number
+    motorbikes: VehicleCategory[]
+    cars: VehicleCategory[]
+  }
   totalRooms: number
   nights: number
   onBack: () => void
@@ -36,7 +47,7 @@ type PaymentReviewProps = {
 
 export function PaymentReview({
   roomSelections, checkIn, checkOut, boardPlan,
-  roomTotal, boardTotal, equipmentTotal, transferTotal, surchargePct, grandTotal,
+  roomTotal, boardTotal, equipmentTotal, vehiclesTotal, transferTotal, surchargePct, grandTotal,
   guest, extras, pricing, totalRooms, nights, onBack, onSuccess,
 }: PaymentReviewProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "booking" | "error">("idle")
@@ -67,8 +78,9 @@ export function PaymentReview({
       const days = rentalDays(surfStart, surfEnd, nights)
       const units = await getAvailableUnits(EQUIPMENT_SURFBOARD, surfStart, surfEnd)
       if (units.data) {
+        const total = surfboardTotalForDays(days, pricing.surfboardPricePerDay, SURFBOARD_TIERS)
         for (let i = 0; i < Math.min(extras.surfboardQty, units.data.length); i++) {
-          equipment.push({ unit_id: units.data[i].id, start_date: surfStart, end_date: surfEnd, price_usd: pricing.surfboardPricePerDay * days })
+          equipment.push({ unit_id: units.data[i].id, start_date: surfStart, end_date: surfEnd, price_usd: total })
         }
       }
     }
@@ -81,6 +93,29 @@ export function PaymentReview({
         for (let i = 0; i < Math.min(extras.bicycleQty, units.data.length); i++) {
           equipment.push({ unit_id: units.data[i].id, start_date: bikeStart, end_date: bikeEnd, price_usd: pricing.bicyclePricePerDay * days })
         }
+      }
+    }
+
+    const lookup = new Map<string, VehicleCategory>()
+    for (const m of pricing.motorbikes) lookup.set(m.id, m)
+    for (const c of pricing.cars) lookup.set(c.id, c)
+    for (const it of extras.items) {
+      const cat = lookup.get(it.categoryId)
+      if (!cat) continue
+      const start = it.start || checkIn
+      const end = it.end || checkOut
+      const days = rentalDays(start, end, nights)
+      const perUnitTotal = cat.pricePerDay * days
+      const units = await getAvailableUnits(it.categoryId, start, end)
+      if (units.error) throw new Error(units.error)
+      if (!units.data || units.data.length === 0) {
+        throw new Error(`No vehicles available for ${cat.name} on the selected dates`)
+      }
+      // ponytail: assign qty units (cycle through if more requested than free). All units
+      // share the same dates and price; we record one equipment_booking per unit so the
+      // dashboard equipment panel can see each one individually.
+      for (let i = 0; i < Math.min(it.qty, units.data.length); i++) {
+        equipment.push({ unit_id: units.data[i].id, start_date: start, end_date: end, price_usd: perUnitTotal })
       }
     }
 
@@ -163,6 +198,10 @@ export function PaymentReview({
     }
   }
 
+  const vehicleLookup = new Map<string, VehicleCategory>()
+  for (const m of pricing.motorbikes) vehicleLookup.set(m.id, m)
+  for (const c of pricing.cars) vehicleLookup.set(c.id, c)
+
   return (
     <div className="space-y-6">
       <div>
@@ -185,17 +224,19 @@ export function PaymentReview({
           </div>
         ))}
 
-        {extras.surfboardQty > 0 && (
-          <div className="border border-stone-200 dark:border-stone-800 p-3 text-sm font-sans">
-            <div className="flex justify-between">
-              <span className="font-medium text-stone-900 dark:text-stone-100">Surfboard &times; {extras.surfboardQty}</span>
-              <span className="text-stone-900 dark:text-stone-100">
-                {formatCurrency(extras.surfboardQty * pricing.surfboardPricePerDay * rentalDays(extras.surfboardStart || checkIn, extras.surfboardEnd || checkOut, nights))}
-              </span>
+        {extras.surfboardQty > 0 && (() => {
+          const days = rentalDays(extras.surfboardStart || checkIn, extras.surfboardEnd || checkOut, nights)
+          const total = surfboardTotalForDays(days, pricing.surfboardPricePerDay, SURFBOARD_TIERS)
+          return (
+            <div className="border border-stone-200 dark:border-stone-800 p-3 text-sm font-sans">
+              <div className="flex justify-between">
+                <span className="font-medium text-stone-900 dark:text-stone-100">Surfboard &times; {extras.surfboardQty}</span>
+                <span className="text-stone-900 dark:text-stone-100">{formatCurrency(total * extras.surfboardQty)}</span>
+              </div>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{extras.surfboardStart || checkIn} &rarr; {extras.surfboardEnd || checkOut} &middot; {days} day{days > 1 ? "s" : ""} (tiered)</p>
             </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{extras.surfboardStart || checkIn} &rarr; {extras.surfboardEnd || checkOut} &middot; {pricing.surfboardPricePerDay}/day</p>
-          </div>
-        )}
+          )
+        })()}
         {extras.bicycleQty > 0 && (
           <div className="border border-stone-200 dark:border-stone-800 p-3 text-sm font-sans">
             <div className="flex justify-between">
@@ -207,6 +248,20 @@ export function PaymentReview({
             <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{extras.bicycleStart || checkIn} &rarr; {extras.bicycleEnd || checkOut} &middot; {pricing.bicyclePricePerDay}/day</p>
           </div>
         )}
+        {extras.items.map((it, idx) => {
+          const cat = vehicleLookup.get(it.categoryId)
+          if (!cat) return null
+          const days = rentalDays(it.start || checkIn, it.end || checkOut, nights)
+          return (
+            <div key={`${it.categoryId}-${idx}`} className="border border-stone-200 dark:border-stone-800 p-3 text-sm font-sans">
+              <div className="flex justify-between">
+                <span className="font-medium text-stone-900 dark:text-stone-100">{cat.name} &times; {it.qty}</span>
+                <span className="text-stone-900 dark:text-stone-100">{formatCurrency(it.qty * cat.pricePerDay * days)}</span>
+              </div>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{it.start || checkIn} &rarr; {it.end || checkOut} &middot; {days} day{days > 1 ? "s" : ""} &middot; ${cat.pricePerDay}/day</p>
+            </div>
+          )
+        })}
         {extras.transferNeeded && (
           <div className="border border-stone-200 dark:border-stone-800 p-3 text-sm font-sans">
             <div className="flex justify-between">
@@ -232,6 +287,12 @@ export function PaymentReview({
             <td className="py-2 font-medium text-stone-900 dark:text-stone-100">Equipment total</td>
             <td className="py-2 text-right text-stone-900 dark:text-stone-100">{formatCurrency(equipmentTotal)}</td>
           </tr>
+          {vehiclesTotal > 0 && (
+            <tr className="border-b border-stone-200 dark:border-stone-800">
+              <td className="py-2 font-medium text-stone-900 dark:text-stone-100">Vehicles total</td>
+              <td className="py-2 text-right text-stone-900 dark:text-stone-100">{formatCurrency(vehiclesTotal)}</td>
+            </tr>
+          )}
           <tr className="border-b border-stone-200 dark:border-stone-800">
             <td className="py-2 font-medium text-stone-900 dark:text-stone-100">Transfer total</td>
             <td className="py-2 text-right text-stone-900 dark:text-stone-100">{formatCurrency(transferTotal)}</td>

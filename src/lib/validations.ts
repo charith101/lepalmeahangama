@@ -41,13 +41,30 @@ const dateRangeRefine = (start?: string, end?: string) => {
 
 export const boardPlanSchema = z.enum(["room_only", "half_board", "full_board"])
 
+// ponytail: extras are grouped into a list so the wizard can add motorbikes/cars
+// without growing the schema per category. Each item carries its own date range.
+export const extrasItemSchema = z.object({
+  categoryId: z.string().min(1, "Category is required"),
+  qty: z.number().int().min(1, "Quantity must be at least 1").max(20, "Maximum 20 per item"),
+  start: z.string().min(1, "Start date is required"),
+  end: z.string().min(1, "End date is required"),
+}).refine((d) => dateRangeRefine(d.start, d.end), {
+  message: "End date must be after start date",
+  path: ["end"],
+})
+
 export const extrasSchema = z.object({
+  // Legacy qty/date shape kept for backward compat with saved sessions.
   surfboardQty: z.number().int().min(0).max(20),
   bicycleQty: z.number().int().min(0).max(20),
   surfboardStart: z.string(),
   surfboardEnd: z.string(),
   bicycleStart: z.string(),
   bicycleEnd: z.string(),
+  // New generic item list (motorbikes + cars). Surfboard/bicycle can also be
+  // expressed here, but the wizard still uses the legacy fields for them to
+  // keep the existing UI working with minimal churn.
+  items: z.array(extrasItemSchema).default([]),
   transferNeeded: z.boolean(),
   transferDirection: z.enum(["arrival", "departure"]),
   flightNumber: z.string().max(50, "Flight number must be 50 characters or less"),

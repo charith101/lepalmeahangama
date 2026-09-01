@@ -8,6 +8,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 }
 
+const MOTORBIKE_NAMES = new Set([
+  "Motorbike — TVS Ntorq 135CC",
+  "Motorbike — Honda Dio 110CC",
+  "Motorbike — Honda Navi 109cc",
+])
+const CAR_PREFIX = "Car — "
+
 export default async function BookingPage(props: {
   searchParams: Promise<{ categoryId?: string; checkIn?: string; checkOut?: string }>
 }) {
@@ -16,7 +23,7 @@ export default async function BookingPage(props: {
 
   const [catResult, equipResult, routeResult, settingsResult] = await Promise.all([
     supabase.from("room_categories").select("id, name, base_price_usd, max_occupancy, description, image_url"),
-    supabase.from("equipment_categories").select("name, price_per_day_usd"),
+    supabase.from("equipment_categories").select("id, name, price_per_day_usd"),
     supabase.from("airport_transfer_routes").select("fixed_price_usd"),
     supabase.from("settings").select("surcharge_pct"),
   ])
@@ -26,11 +33,27 @@ export default async function BookingPage(props: {
   const routeData = routeResult.data || []
   const settings = settingsResult.data?.[0]
 
+  const findByName = (name: string) => equipData.find((e) => e.name === name)
+
+  const surf = findByName("Surfboard")
+  const bike = findByName("Bicycle")
+
+  const motorbikes = equipData
+    .filter((e) => MOTORBIKE_NAMES.has(e.name))
+    .map((e) => ({ id: e.id, name: e.name.replace(/^Motorbike — /, ""), pricePerDay: Number(e.price_per_day_usd) }))
+
+  const cars = equipData
+    .filter((e) => e.name.startsWith(CAR_PREFIX))
+    .sort((a, b) => Number(a.price_per_day_usd) - Number(b.price_per_day_usd))
+    .map((e) => ({ id: e.id, name: e.name.replace(CAR_PREFIX, ""), pricePerDay: Number(e.price_per_day_usd) }))
+
   const pricing = {
-    surfboardPricePerDay: Number(equipData.find((e) => e.name === "Surfboard")?.price_per_day_usd ?? 15),
-    bicyclePricePerDay: Number(equipData.find((e) => e.name === "Bicycle")?.price_per_day_usd ?? 5),
+    surfboardPricePerDay: Number(surf?.price_per_day_usd ?? 25),
+    bicyclePricePerDay: Number(bike?.price_per_day_usd ?? 5),
     transferPrice: Number(routeData[0]?.fixed_price_usd ?? 30),
     surchargePct: Number(settings?.surcharge_pct ?? 5),
+    motorbikes,
+    cars,
   }
 
   return (

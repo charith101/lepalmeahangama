@@ -4,20 +4,25 @@ import { useState, useMemo, useEffect } from "react"
 import { differenceInDays } from "date-fns"
 import { Check } from "lucide-react"
 import { DateStep, type RoomSelection } from "./DateStep"
-import { ExtrasStep, type ExtrasData } from "./ExtrasStep"
+import { ExtrasStep, type ExtrasData, type ExtrasPricing } from "./ExtrasStep"
 import { GuestDetailsStep, type GuestData } from "./GuestDetailsStep"
 import { PaymentReview } from "./PaymentReview"
 import { BoardStep } from "./BoardStep"
-import { BOARD_PRICE_PER_NIGHT, type BoardPlan } from "@/lib/constants"
+import { BOARD_PRICE_PER_NIGHT, surfboardTotalForDays, SURFBOARD_TIERS } from "@/lib/constants"
+import type { BoardPlan } from "@/lib/constants"
 import { cn, formatCurrency, rentalDays } from "@/lib/utils"
 
 type RoomCategory = { id: string; name: string; base_price_usd: number; max_occupancy: number; description: string | null; image_url: string | null }
+
+type VehicleCategory = { id: string; name: string; pricePerDay: number; subtitle?: string }
 
 type PricingData = {
   surfboardPricePerDay: number
   bicyclePricePerDay: number
   transferPrice: number
   surchargePct: number
+  motorbikes: VehicleCategory[]
+  cars: VehicleCategory[]
 }
 
 type BookingWizardProps = {
@@ -41,6 +46,7 @@ const defaultExtras: ExtrasData = {
   surfboardQty: 0, bicycleQty: 0,
   surfboardStart: "", surfboardEnd: "",
   bicycleStart: "", bicycleEnd: "",
+  items: [],
   transferNeeded: false, transferDirection: "arrival",
   flightNumber: "", transferTime: "",
 }
@@ -58,6 +64,15 @@ const steps = [
 ]
 
 const STORAGE_KEY = "booking_wizard_data"
+
+function extrasPricing(p: PricingData): ExtrasPricing {
+  return {
+    surfboardPricePerDay: p.surfboardPricePerDay,
+    bicyclePricePerDay: p.bicyclePricePerDay,
+    motorbikes: p.motorbikes,
+    cars: p.cars,
+  }
+}
 
 export function BookingWizard({ categories, pricing, defaultCategoryId, defaultCheckIn, defaultCheckOut }: BookingWizardProps) {
   const [step, setStep] = useState(() => {
@@ -91,7 +106,7 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
             return {
               ...fallback,
               ...parsed.data,
-              extras: { ...defaultExtras, ...parsed.data.extras },
+              extras: { ...defaultExtras, ...(parsed.data.extras ?? {}), items: parsed.data.extras?.items ?? [] },
               guest: { ...defaultGuest, ...parsed.data.guest },
             }
           }
@@ -133,21 +148,36 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
   }, [data.boardPlan, nights, totalRooms])
 
   const equipmentTotal = useMemo(() => {
-    const surf = data.extras.surfboardQty * pricing.surfboardPricePerDay * rentalDays(data.extras.surfboardStart, data.extras.surfboardEnd, nights)
-    const bike = data.extras.bicycleQty * pricing.bicyclePricePerDay * rentalDays(data.extras.bicycleStart, data.extras.bicycleEnd, nights)
-    return surf + bike
-  }, [data.extras, pricing, nights])
+    const surfDays = rentalDays(data.extras.surfboardStart, data.extras.surfboardEnd, nights)
+    const bikeDays = rentalDays(data.extras.bicycleStart, data.extras.bicycleEnd, nights)
+    const surfTotal = data.extras.surfboardQty * surfboardTotalForDays(surfDays, pricing.surfboardPricePerDay, SURFBOARD_TIERS)
+    const bikeTotal = data.extras.bicycleQty * pricing.bicyclePricePerDay * bikeDays
+    return surfTotal + bikeTotal
+  }, [data.extras.surfboardQty, data.extras.surfboardStart, data.extras.surfboardEnd, data.extras.bicycleQty, data.extras.bicycleStart, data.extras.bicycleEnd, pricing.surfboardPricePerDay, pricing.bicyclePricePerDay, nights])
+
+  const vehiclesTotal = useMemo(() => {
+    const lookup = new Map<string, VehicleCategory>()
+    for (const m of pricing.motorbikes) lookup.set(m.id, m)
+    for (const c of pricing.cars) lookup.set(c.id, c)
+    return data.extras.items.reduce((sum, it) => {
+      const cat = lookup.get(it.categoryId)
+      if (!cat) return sum
+      const days = rentalDays(it.start, it.end, nights)
+      return sum + it.qty * cat.pricePerDay * days
+    }, 0)
+  }, [data.extras.items, pricing.motorbikes, pricing.cars, nights])
 
   const transferTotal = useMemo(() => {
     return data.extras.transferNeeded ? pricing.transferPrice : 0
   }, [data.extras.transferNeeded, pricing.transferPrice])
 
   const grandTotal = useMemo(() => {
-    const subtotal = roomTotal + boardTotal + equipmentTotal + transferTotal
+    const subtotal = roomTotal + boardTotal + equipmentTotal + vehiclesTotal + transferTotal
     return subtotal * (1 + pricing.surchargePct / 100)
-  }, [roomTotal, boardTotal, equipmentTotal, transferTotal, pricing.surchargePct])
+  }, [roomTotal, boardTotal, equipmentTotal, vehiclesTotal, transferTotal, pricing.surchargePct])
 
   const showPriceBar = step > 1 || (step === 1 && data.roomSelections.length > 0)
+  const subtotal = roomTotal + boardTotal + equipmentTotal + vehiclesTotal + transferTotal
 
   return (
     <div className="space-y-8">
@@ -159,23 +189,23 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
               disabled={s.num > step}
               onClick={() => s.num < step && setStep(s.num)}
               className={cn(
-                "flex size-8 items-center justify-center text-xs font-sans font-medium transition-colors",
+                "flex size-10 items-center justify-center text-sm font-sans font-medium transition-colors",
                 s.num < step && "bg-stone-900 text-white cursor-pointer",
                 s.num === step && "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900",
                 s.num > step && "bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-default",
               )}
             >
-              {s.num < step ? <Check className="size-4" /> : s.num}
+              {s.num < step ? <Check className="size-5" /> : s.num}
             </button>
             <span className={cn(
-              "text-xs font-sans font-medium hidden sm:inline",
+              "text-sm font-sans font-medium hidden sm:inline",
               s.num <= step ? "text-stone-900 dark:text-stone-100" : "text-stone-400 dark:text-stone-500",
             )}>
               {s.label}
             </span>
             {i < steps.length - 1 && (
               <div className={cn(
-                "hidden sm:block h-px w-8 mx-1",
+                "hidden sm:block h-px w-10 mx-1",
                 s.num < step ? "bg-stone-900 dark:bg-stone-100" : "bg-stone-200 dark:bg-stone-800",
               )} />
             )}
@@ -195,11 +225,11 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
           <div className="flex items-center gap-3">
             {step > 1 && step < 5 && (
               <span className="text-xs text-stone-500 dark:text-stone-400">
-                Subtotal: {formatCurrency(roomTotal + boardTotal + equipmentTotal + transferTotal)}
+                Subtotal: {formatCurrency(subtotal)}
               </span>
             )}
-            <span className="font-semibold text-stone-900 dark:text-stone-100">
-              {step === 5 ? formatCurrency(grandTotal) : formatCurrency(roomTotal + boardTotal + equipmentTotal + transferTotal)}
+            <span className="text-xl font-bold tabular-nums text-stone-900 dark:text-stone-100">
+              {step === 5 ? formatCurrency(grandTotal) : formatCurrency(subtotal)}
             </span>
           </div>
         </div>
@@ -208,6 +238,13 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
       {step === 1 && (
         <DateStep
           categories={categories}
+          onChange={(stepData) => {
+            updateData({
+              checkIn: stepData.checkIn,
+              checkOut: stepData.checkOut,
+              roomSelections: stepData.roomSelections,
+            })
+          }}
           onNext={(stepData) => {
             updateData({
               checkIn: stepData.checkIn,
@@ -239,6 +276,7 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
         <ExtrasStep
           defaultCheckIn={data.checkIn}
           defaultCheckOut={data.checkOut}
+          pricing={extrasPricing(pricing)}
           initialData={data.extras}
           onNext={(extras) => {
             updateData({ extras })
@@ -268,6 +306,7 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
           roomTotal={roomTotal}
           boardTotal={boardTotal}
           equipmentTotal={equipmentTotal}
+          vehiclesTotal={vehiclesTotal}
           transferTotal={transferTotal}
           surchargePct={pricing.surchargePct}
           grandTotal={grandTotal}

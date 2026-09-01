@@ -281,16 +281,19 @@ export type Database = {
           id: string
           name: string
           price_per_day_usd: number
+          tiered_pricing: Json | null
         }
         Insert: {
           id?: string
           name: string
           price_per_day_usd: number
+          tiered_pricing?: Json | null
         }
         Update: {
           id?: string
           name?: string
           price_per_day_usd?: number
+          tiered_pricing?: Json | null
         }
         Relationships: []
       }

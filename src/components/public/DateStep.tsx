@@ -25,6 +25,7 @@ export type RoomSelection = {
 type DateStepProps = {
   categories: RoomCategory[]
   onNext: (data: { checkIn: string; checkOut: string; roomSelections: RoomSelection[] }) => void
+  onChange?: (data: { checkIn: string; checkOut: string; roomSelections: RoomSelection[] }) => void
   defaultCategoryId?: string
   defaultCheckOut?: string
   defaultCheckIn?: string
@@ -36,13 +37,14 @@ type AvailState = {
   error: string | null
 }
 
-export function DateStep({ categories, onNext, defaultCategoryId, defaultCheckIn, defaultCheckOut }: DateStepProps) {
+export function DateStep({ categories, onNext, onChange, defaultCategoryId, defaultCheckIn, defaultCheckOut }: DateStepProps) {
   const [checkIn, setCheckIn] = useState<Date | undefined>(defaultCheckIn ? new Date(defaultCheckIn) : undefined)
   const [checkOut, setCheckOut] = useState<Date | undefined>(defaultCheckOut ? new Date(defaultCheckOut) : undefined)
   const [selections, setSelections] = useState<RoomSelection[]>([])
   const [fieldErrors, setFieldErrors] = useState<{ checkIn?: string; checkOut?: string; selections?: string }>({})
   const [avail, setAvail] = useState<Record<string, AvailState>>({})
   const initialized = useRef(false)
+  const mounted = useRef(false)
 
   async function checkAvailability(categoryId: string, ci: string, co: string) {
     const key = `${categoryId}_${ci}_${co}`
@@ -58,23 +60,31 @@ export function DateStep({ categories, onNext, defaultCategoryId, defaultCheckIn
     }))
   }
 
+  function syncUp(roomSelections: RoomSelection[], dates?: { checkIn?: string; checkOut?: string }) {
+    onChange?.({
+      checkIn: dates?.checkIn ?? (checkIn ? format(checkIn, "yyyy-MM-dd") : ""),
+      checkOut: dates?.checkOut ?? (checkOut ? format(checkOut, "yyyy-MM-dd") : ""),
+      roomSelections,
+    })
+  }
+
   function addSelection(categoryId: string) {
     if (!categoryId) return
     const cat = categories.find((c) => c.id === categoryId)
     if (!cat) return
 
-    setSelections((prev) => {
-      if (prev.some((s) => s.categoryId === categoryId)) return prev
-      return [...prev, {
-        categoryId: cat.id,
-        categoryName: cat.name,
-        basePrice: Number(cat.base_price_usd),
-        maxOccupancy: cat.max_occupancy,
-        quantity: 1,
-        availableCount: 0,
-        imageUrl: cat.image_url,
-      }]
-    })
+    if (selections.some((s) => s.categoryId === categoryId)) return
+    const next = [...selections, {
+      categoryId: cat.id,
+      categoryName: cat.name,
+      basePrice: Number(cat.base_price_usd),
+      maxOccupancy: cat.max_occupancy,
+      quantity: 1,
+      availableCount: 0,
+      imageUrl: cat.image_url,
+    }]
+    setSelections(next)
+    syncUp(next)
 
     if (checkIn && checkOut) {
       checkAvailability(categoryId, format(checkIn, "yyyy-MM-dd"), format(checkOut, "yyyy-MM-dd"))
@@ -93,15 +103,24 @@ export function DateStep({ categories, onNext, defaultCategoryId, defaultCheckIn
       }
     } else {
       setSelections([])
+      if (mounted.current) syncUp([])
     }
   }, [checkIn, checkOut])
 
+  useEffect(() => {
+    mounted.current = true
+  }, [])
+
   function updateSelection(categoryId: string, updates: Partial<RoomSelection>) {
-    setSelections((prev) => prev.map((s) => s.categoryId === categoryId ? { ...s, ...updates } : s))
+    const next = selections.map((s) => s.categoryId === categoryId ? { ...s, ...updates } : s)
+    setSelections(next)
+    syncUp(next)
   }
 
   function removeSelection(categoryId: string) {
-    setSelections((prev) => prev.filter((s) => s.categoryId !== categoryId))
+    const next = selections.filter((s) => s.categoryId !== categoryId)
+    setSelections(next)
+    syncUp(next)
   }
 
   function handleSubmit() {
@@ -176,7 +195,7 @@ export function DateStep({ categories, onNext, defaultCategoryId, defaultCheckIn
               <Calendar
                 mode="single"
                 selected={checkIn}
-                onSelect={(d) => { setCheckIn(d); setFieldErrors((p) => ({ ...p, checkIn: undefined })) }}
+                onSelect={(d) => { setCheckIn(d); setFieldErrors((p) => ({ ...p, checkIn: undefined })); syncUp(selections, { checkIn: d ? format(d, "yyyy-MM-dd") : "" }) }}
                 disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
               />
             </PopoverContent>
@@ -201,7 +220,7 @@ export function DateStep({ categories, onNext, defaultCategoryId, defaultCheckIn
               <Calendar
                 mode="single"
                 selected={checkOut}
-                onSelect={(d) => { setCheckOut(d); setFieldErrors((p) => ({ ...p, checkOut: undefined })) }}
+                onSelect={(d) => { setCheckOut(d); setFieldErrors((p) => ({ ...p, checkOut: undefined })); syncUp(selections, { checkOut: d ? format(d, "yyyy-MM-dd") : "" }) }}
                 disabled={(date) => !checkIn || date <= checkIn}
               />
             </PopoverContent>
@@ -264,10 +283,10 @@ export function DateStep({ categories, onNext, defaultCategoryId, defaultCheckIn
                     <div className="p-5 space-y-4">
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="text-base font-sans font-medium text-stone-900 dark:text-stone-100">{cat.name}</h3>
-                        <span className="text-sm font-sans font-medium text-stone-900 dark:text-stone-100 whitespace-nowrap">
-                          {formatCurrency(Number(cat.base_price_usd))}
-                          <span className="text-xs text-stone-500 dark:text-stone-400 font-normal">/night</span>
-                        </span>
+<span className="text-xl font-sans font-semibold text-stone-900 dark:text-stone-100 whitespace-nowrap tabular-nums">
+  {formatCurrency(Number(cat.base_price_usd))}
+  <span className="text-xs text-stone-500 dark:text-stone-400 font-normal">/night</span>
+</span>
                       </div>
 
                       {points.length > 0 && (
@@ -313,9 +332,10 @@ export function DateStep({ categories, onNext, defaultCategoryId, defaultCheckIn
                                 Added
                               </span>
                             </div>
-                            <p className="text-sm font-sans text-stone-500 dark:text-stone-400 mt-1">
-                              {formatCurrency(Number(sel!.basePrice))} / night
-                            </p>
+<p className="text-lg font-sans font-semibold text-stone-900 dark:text-stone-100 mt-1 tabular-nums">
+  {formatCurrency(Number(sel!.basePrice))}
+  <span className="text-xs text-stone-500 dark:text-stone-400 font-normal">/ night</span>
+</p>
                           </div>
                           <div className="flex items-center gap-2">
                             {a?.loading && <span className="text-xs font-sans text-stone-500 dark:text-stone-400 animate-pulse">Checking...</span>}
@@ -397,9 +417,9 @@ export function DateStep({ categories, onNext, defaultCategoryId, defaultCheckIn
                             {formatCurrency(Number(sel!.basePrice))} &times; {sel!.quantity} {sel!.quantity === 1 ? "room" : "rooms"} &times; {nights} {nights === 1 ? "night" : "nights"}
                           </p>
                         </div>
-                        <span className="text-base font-sans font-semibold text-stone-900 dark:text-stone-100 tabular-nums">
-                          {formatCurrency(Number(sel!.basePrice) * sel!.quantity * nights)}
-                        </span>
+<span className="text-xl font-sans font-bold text-stone-900 dark:text-stone-100 tabular-nums">
+  {formatCurrency(Number(sel!.basePrice) * sel!.quantity * nights)}
+</span>
                       </div>
 
                       <div className="p-3">
@@ -430,14 +450,14 @@ export function DateStep({ categories, onNext, defaultCategoryId, defaultCheckIn
       )}
 
       {nights > 0 && selections.length > 0 && (
-        <div className="bg-stone-50 dark:bg-stone-900 p-3 flex items-center justify-between text-sm font-sans">
-          <span className="text-stone-500 dark:text-stone-400">
-            {selections.reduce((s, sel) => s + sel.quantity, 0)} room{selections.reduce((s, sel) => s + sel.quantity, 0) > 1 ? "s" : ""} &times; {nights} {nights === 1 ? "night" : "nights"}
-          </span>
-          <span className="font-medium text-stone-900 dark:text-stone-100">
-            {formatCurrency(selections.reduce((sum, sel) => sum + Number(sel.basePrice) * sel.quantity * nights, 0))}
-          </span>
-        </div>
+<div className="bg-stone-50 dark:bg-stone-900 p-3 flex items-center justify-between text-sm font-sans">
+  <span className="text-stone-500 dark:text-stone-400 text-base">
+    {selections.reduce((s, sel) => s + sel.quantity, 0)} room{selections.reduce((s, sel) => s + sel.quantity, 0) > 1 ? "s" : ""} &times; {nights} {nights === 1 ? "night" : "nights"}
+  </span>
+  <span className="text-xl font-bold text-stone-900 dark:text-stone-100 tabular-nums">
+    {formatCurrency(selections.reduce((sum, sel) => sum + Number(sel.basePrice) * sel.quantity * nights, 0))}
+  </span>
+</div>
       )}
 
       <button
