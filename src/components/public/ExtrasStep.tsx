@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Car, CalendarIcon, Icon, Plane, Trash2 } from "lucide-react"
+import { Car, CalendarIcon, Icon, Plane } from "lucide-react"
 import { surfboard } from "@lucide/lab"
 import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
