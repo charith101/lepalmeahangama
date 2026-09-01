@@ -48,6 +48,7 @@ const SurfboardIcon = ({ className }: { className?: string }) => (
 
 function DateRangeField({
   label, start, end, onStart, onEnd, startError, endError,
+  onClearStartError, onClearEndError,
 }: {
   label: string
   start: string
@@ -56,6 +57,8 @@ function DateRangeField({
   onEnd: (v: string) => void
   startError?: string
   endError?: string
+  onClearStartError?: () => void
+  onClearEndError?: () => void
 }) {
   return (
     <div className="grid sm:grid-cols-2 gap-4">
@@ -74,11 +77,14 @@ function DateRangeField({
             <Calendar
               mode="single"
               selected={start ? new Date(start + "T12:00:00") : undefined}
-              onSelect={(d) => { onStart(d ? format(d, "yyyy-MM-dd") : ""); }}
+              onSelect={(d) => { onStart(d ? format(d, "yyyy-MM-dd") : ""); onClearStartError?.(); }}
               disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
             />
           </PopoverContent>
         </Popover>
+        {startError && (
+          <p className="mt-1 text-xs text-red-500 font-sans" role="alert">{startError}</p>
+        )}
       </div>
       <div data-invalid={!!endError || undefined}>
         <label className="text-xs font-sans text-stone-500 dark:text-stone-400 mb-1.5 block">{label} end *</label>
@@ -95,13 +101,13 @@ function DateRangeField({
             <Calendar
               mode="single"
               selected={end ? new Date(end + "T12:00:00") : undefined}
-              onSelect={(d) => { onEnd(d ? format(d, "yyyy-MM-dd") : ""); }}
+              onSelect={(d) => { onEnd(d ? format(d, "yyyy-MM-dd") : ""); onClearEndError?.(); }}
               disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || (start ? date <= new Date(start + "T12:00:00") : false)}
             />
           </PopoverContent>
         </Popover>
         {endError && (
-          <p className="mt-1 text-sm text-red-500 font-sans" role="alert">{endError}</p>
+          <p className="mt-1 text-xs text-red-500 font-sans" role="alert">{endError}</p>
         )}
       </div>
     </div>
