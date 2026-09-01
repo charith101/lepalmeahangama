@@ -82,17 +82,6 @@ export function PaymentReview({
         }
       }
     }
-    if (extras.bicycleQty > 0) {
-      const bikeStart = extras.bicycleStart || checkIn
-      const bikeEnd = extras.bicycleEnd || checkOut
-      const days = rentalDays(bikeStart, bikeEnd, nights)
-      const units = await getAvailableUnits(EQUIPMENT_BICYCLE, bikeStart, bikeEnd)
-      if (units.data) {
-        for (let i = 0; i < Math.min(extras.bicycleQty, units.data.length); i++) {
-          equipment.push({ unit_id: units.data[i].id, start_date: bikeStart, end_date: bikeEnd, price_usd: pricing.bicyclePricePerDay * days })
-        }
-      }
-    }
 
     const lookup = new Map<string, VehicleCategory>()
     for (const m of pricing.motorbikes) lookup.set(m.id, m)
