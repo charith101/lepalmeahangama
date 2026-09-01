@@ -54,16 +54,9 @@ export const extrasItemSchema = z.object({
 })
 
 export const extrasSchema = z.object({
-  // Legacy qty/date shape kept for backward compat with saved sessions.
   surfboardQty: z.number().int().min(0).max(20),
-  bicycleQty: z.number().int().min(0).max(20),
   surfboardStart: z.string(),
   surfboardEnd: z.string(),
-  bicycleStart: z.string(),
-  bicycleEnd: z.string(),
-  // New generic item list (motorbikes + cars). Surfboard/bicycle can also be
-  // expressed here, but the wizard still uses the legacy fields for them to
-  // keep the existing UI working with minimal churn.
   items: z.array(extrasItemSchema).default([]),
   transferNeeded: z.boolean(),
   transferDirection: z.enum(["arrival", "departure"]),
@@ -72,9 +65,6 @@ export const extrasSchema = z.object({
 }).refine((data) => dateRangeRefine(data.surfboardStart, data.surfboardEnd), {
   message: "Surfboard end date must be after start date",
   path: ["surfboardEnd"],
-}).refine((data) => dateRangeRefine(data.bicycleStart, data.bicycleEnd), {
-  message: "Bicycle end date must be after start date",
-  path: ["bicycleEnd"],
 }).refine((data) => {
   if (data.transferNeeded && !data.transferTime) return false
   return true
