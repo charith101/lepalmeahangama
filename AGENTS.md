@@ -5,6 +5,7 @@
 - Loop over a plan until you get the correct, accurate output.
 - Plan tasks are sequential within each file — do not skip ahead until the current task's verification passes.
 - Use graphify to reduce token usage.(Generate the graph if it is not the lastest)
+- When you complete a task and when you are giving the final verdict or summary use i-have-adhd skill.
 
 ## Skills
 
