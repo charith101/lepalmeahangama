@@ -275,7 +275,7 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, c
         <div className="border border-stone-200 dark:border-stone-800 p-4 space-y-4">
           <div className="flex items-center gap-3">
             <div className="size-12 bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
-              <SurfboardIcon className="size-6 text-stone-900 dark:text-stone-100 rotate-90" />
+              <Motorbike className="size-6 text-stone-900 dark:text-stone-100" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-sans font-medium text-stone-900 dark:text-stone-100">Motorbike</p>
