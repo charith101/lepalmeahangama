@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation"
 import { TreePalm } from "lucide-react"
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 
+const bookingEnabled = process.env.NEXT_PUBLIC_BOOKING_ENABLED !== "false"
+
 const navLinks = [
   { label: "Stay", href: "/rooms" },
   { label: "Dine", href: "/dine" },
@@ -98,16 +100,18 @@ export function PublicNavbar() {
                   >
                     My Bookings
                   </Link>
-                  <Link
-                    href="/booking"
-                    className={`px-5 py-2 text-xs font-sans font-medium uppercase tracking-[0.15em] transition-colors duration-200 ${
-                      scrolledPast
-                        ? "bg-stone-900 dark:bg-stone-800 text-white hover:bg-stone-800 dark:hover:bg-stone-700"
-                        : "border border-white text-white hover:bg-white/10"
-                    }`}
-                  >
-                    Book Now
-                  </Link>
+                  {bookingEnabled && (
+                    <Link
+                      href="/booking"
+                      className={`px-5 py-2 text-xs font-sans font-medium uppercase tracking-[0.15em] transition-colors duration-200 ${
+                        scrolledPast
+                          ? "bg-stone-900 dark:bg-stone-800 text-white hover:bg-stone-800 dark:hover:bg-stone-700"
+                          : "border border-white text-white hover:bg-white/10"
+                      }`}
+                    >
+                      Book Now
+                    </Link>
+                  )}
                 <AnimatedThemeToggler
                   className={`flex size-8 items-center justify-center transition-colors ${
                     scrolledPast
@@ -228,22 +232,24 @@ export function PublicNavbar() {
             My Bookings
           </Link>
 
-          <Link
-            href="/booking"
-            onClick={() => setOpen(false)}
-            className={`block py-3 text-base font-sans font-semibold transition-all duration-300 border-l-2 border-transparent hover:border-current pl-4 -ml-4 ${
-              scrolledPast
-                ? "text-stone-900 dark:text-stone-100"
-                : "text-white"
-            }`}
-            style={{
-              transitionDelay: mounted && open ? "300ms" : "0ms",
-              transform: mounted && open ? "translateX(0)" : "translateX(-12px)",
-              opacity: mounted && open ? 1 : 0,
-            }}
-          >
-            Book Now
-          </Link>
+          {bookingEnabled && (
+            <Link
+              href="/booking"
+              onClick={() => setOpen(false)}
+              className={`block py-3 text-base font-sans font-semibold transition-all duration-300 border-l-2 border-transparent hover:border-current pl-4 -ml-4 ${
+                scrolledPast
+                  ? "text-stone-900 dark:text-stone-100"
+                  : "text-white"
+              }`}
+              style={{
+                transitionDelay: mounted && open ? "300ms" : "0ms",
+                transform: mounted && open ? "translateX(0)" : "translateX(-12px)",
+                opacity: mounted && open ? 1 : 0,
+              }}
+            >
+              Book Now
+            </Link>
+          )}
         </div>
       </div>
     </>

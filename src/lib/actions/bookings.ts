@@ -114,7 +114,11 @@ export async function createPayHereBooking(data: {
   grand_total_usd?: number
   equipment?: Array<{ unit_id: string; start_date: string; end_date: string; price_usd?: number }>
   transfer?: { route_id: string; direction: "arrival" | "departure"; flight_number?: string; transfer_datetime: string; price_usd?: number }
-}) {
+  }) {
+  if (process.env.NEXT_PUBLIC_BOOKING_ENABLED === "false") {
+    return { error: "Online booking is temporarily unavailable. Please contact us directly." }
+  }
+
   const boardPlan = BOARD_PLANS.some((p) => p.key === data.board_plan)
     ? (data.board_plan as BoardPlan)
     : "room_only"

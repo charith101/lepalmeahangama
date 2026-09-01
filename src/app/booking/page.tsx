@@ -18,6 +18,24 @@ const CAR_PREFIX = "Car — "
 export default async function BookingPage(props: {
   searchParams: Promise<{ categoryId?: string; checkIn?: string; checkOut?: string }>
 }) {
+  if (process.env.NEXT_PUBLIC_BOOKING_ENABLED === "false") {
+    return (
+      <div className="min-h-screen bg-white dark:bg-stone-950 pt-24 pb-16 px-6">
+        <div className="max-w-lg mx-auto text-center">
+          <p className="text-xs font-sans font-medium tracking-[0.25em] uppercase text-stone-400 dark:text-stone-500 mb-2">
+            Reservation
+          </p>
+          <h1 className="text-[clamp(1.8rem,4vw,2.5rem)] font-serif font-normal leading-[1.14] text-stone-900 dark:text-stone-100 mb-4">
+            Online Booking Unavailable
+          </h1>
+          <p className="text-stone-500 dark:text-stone-400 font-sans text-sm leading-relaxed">
+            Online reservations are temporarily unavailable. Please contact us directly to book your stay.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const searchParams = await props.searchParams
   const supabase = await createClient()
 
