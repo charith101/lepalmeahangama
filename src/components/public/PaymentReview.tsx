@@ -224,17 +224,6 @@ export function PaymentReview({
             </div>
           )
         })()}
-        {extras.bicycleQty > 0 && (
-          <div className="border border-stone-200 dark:border-stone-800 p-3 text-sm font-sans">
-            <div className="flex justify-between">
-              <span className="font-medium text-stone-900 dark:text-stone-100">Bicycle &times; {extras.bicycleQty}</span>
-              <span className="text-stone-900 dark:text-stone-100">
-                {formatCurrency(extras.bicycleQty * pricing.bicyclePricePerDay * rentalDays(extras.bicycleStart || checkIn, extras.bicycleEnd || checkOut, nights))}
-              </span>
-            </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{extras.bicycleStart || checkIn} &rarr; {extras.bicycleEnd || checkOut} &middot; {pricing.bicyclePricePerDay}/day</p>
-          </div>
-        )}
         {extras.items.map((it, idx) => {
           const cat = vehicleLookup.get(it.categoryId)
           if (!cat) return null
