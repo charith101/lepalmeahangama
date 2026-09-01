@@ -113,6 +113,7 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
   })
 
   const [liveExtras, setLiveExtras] = useState<ExtrasData | null>(null)
+  const [liveBoardPlan, setLiveBoardPlan] = useState<BoardPlan | null>(null)
 
   function clearStorage() {
     try { sessionStorage.removeItem(STORAGE_KEY) } catch {}
@@ -141,9 +142,12 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
     return data.roomSelections.reduce((sum, sel) => sum + sel.quantity, 0)
   }, [data.roomSelections])
 
+  // Use live board plan when on step 2, otherwise use saved data
+  const activeBoardPlan = step === 2 && liveBoardPlan ? liveBoardPlan : data.boardPlan
+
   const boardTotal = useMemo(() => {
-    return BOARD_PRICE_PER_NIGHT(data.boardPlan) * nights * totalRooms
-  }, [data.boardPlan, nights, totalRooms])
+    return BOARD_PRICE_PER_NIGHT(activeBoardPlan) * nights * totalRooms
+  }, [activeBoardPlan, nights, totalRooms])
 
   // Use live extras when on step 3, otherwise use saved data
   const activeExtras = step === 3 && liveExtras ? liveExtras : data.extras
