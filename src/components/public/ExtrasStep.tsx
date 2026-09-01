@@ -217,12 +217,47 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, c
     if (!result.success) {
       const errs: Record<string, string> = {}
       for (const issue of result.error.issues) {
-        const top = String(issue.path[0] ?? "")
-        if (top && !errs[top]) errs[top] = issue.message
+        const path = issue.path
+        const top = String(path[0] ?? "")
+        if (top && !errs[top]) {
+          // Map Zod messages to friendlier text
+          const msg = issue.message
+          if (msg.includes("End date must be after start date")) {
+            errs[top] = "End date must be after the start date"
+          } else if (msg.includes("Start date is required")) {
+            errs[top] = "Please select a start date"
+          } else if (msg.includes("End date is required")) {
+            errs[top] = "Please select an end date"
+          } else {
+            errs[top] = msg
+          }
+        }
       }
       setFieldErrors(errs)
       return
     }
+
+    // Additional client-side date validation for better UX
+    const dateErrs: Record<string, string> = {}
+    if (data.surfboardQty > 0) {
+      if (!data.surfboardStart || !data.surfboardEnd) {
+        dateErrs.surfboardEnd = "Please select both start and end dates for surfboard rental"
+      } else if (new Date(data.surfboardEnd) <= new Date(data.surfboardStart)) {
+        dateErrs.surfboardEnd = "Surfboard end date must be after the start date"
+      }
+    }
+    for (const item of data.items) {
+      if (!item.start || !item.end) {
+        dateErrs[item.categoryId] = "Please select both start and end dates"
+      } else if (new Date(item.end) <= new Date(item.start)) {
+        dateErrs[item.categoryId] = "End date must be after the start date"
+      }
+    }
+    if (Object.keys(dateErrs).length > 0) {
+      setFieldErrors(dateErrs)
+      return
+    }
+
     setFieldErrors({})
     onNext(result.data)
   }
