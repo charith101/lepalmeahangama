@@ -267,11 +267,13 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
           initialPlan={data.boardPlan}
           nights={nights}
           totalRooms={totalRooms}
+          onChange={(plan) => setLiveBoardPlan(plan)}
           onNext={(boardPlan) => {
             updateData({ boardPlan })
+            setLiveBoardPlan(null)
             setStep(3)
           }}
-          onBack={() => setStep(1)}
+          onBack={() => { setLiveBoardPlan(null); setStep(1) }}
         />
       )}
 
