@@ -432,7 +432,7 @@ export function AdminPanel({
                 contactMessages.map((m) => (
                   <TableRow key={m.id} className={!m.read ? "bg-muted/30" : ""}>
                     <TableCell className="text-sm whitespace-nowrap">
-                      {new Date(m.created_at).toLocaleDateString()}
+                      {m.created_at ? new Date(m.created_at).toLocaleDateString() : "—"}
                     </TableCell>
                     <TableCell className="font-medium">{m.name}</TableCell>
                     <TableCell className="text-sm">{m.email}</TableCell>

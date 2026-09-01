@@ -17,6 +17,7 @@ export default async function BookingDetailPage(props: { params: Promise<{ id: s
   const booking = {
     ...row,
     invoices: row.invoices ? [row.invoices] : [],
+    payments: row.payments ? [row.payments] : [],
   }
 
   const { data: settings } = await supabase
