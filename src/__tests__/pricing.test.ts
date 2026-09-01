@@ -21,36 +21,20 @@ describe("board plans", () => {
     expect(boardPlanSchema.safeParse("all_inclusive").success).toBe(false)
   })
 
-  it("extra schema accepts separate rental ranges for boards and bikes", () => {
+  it("extra schema accepts separate rental ranges for surfboards", () => {
     const result = extrasSchema.safeParse({
-      surfboardQty: 2, bicycleQty: 1,
+      surfboardQty: 2,
       surfboardStart: "2026-09-01", surfboardEnd: "2026-09-04",
-      bicycleStart: "2026-09-02", bicycleEnd: "2026-09-03",
       items: [],
       transferNeeded: false, transferDirection: "arrival", flightNumber: "", transferTime: "",
     })
     expect(result.success).toBe(true)
   })
 
-  it("rejects a bike range that ends before it starts", () => {
-    const result = extrasSchema.safeParse({
-      surfboardQty: 0, bicycleQty: 1,
-      surfboardStart: "", surfboardEnd: "",
-      bicycleStart: "2026-09-04", bicycleEnd: "2026-09-02",
-      items: [],
-      transferNeeded: false, transferDirection: "arrival", flightNumber: "", transferTime: "",
-    })
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error.issues.some((i) => i.path[0] === "bicycleEnd")).toBe(true)
-    }
-  })
-
   it("accepts motorbike and car items with their own date ranges", () => {
     const result = extrasSchema.safeParse({
-      surfboardQty: 0, bicycleQty: 0,
+      surfboardQty: 0,
       surfboardStart: "", surfboardEnd: "",
-      bicycleStart: "", bicycleEnd: "",
       items: [
         { categoryId: MOTORBIKE_CATEGORIES.tvs_ntorq, qty: 1, start: "2026-09-01", end: "2026-09-04" },
         { categoryId: CAR_CATEGORIES.aqua, qty: 2, start: "2026-09-01", end: "2026-09-03" },
@@ -62,9 +46,8 @@ describe("board plans", () => {
 
   it("rejects an item with an end date before its start", () => {
     const result = extrasSchema.safeParse({
-      surfboardQty: 0, bicycleQty: 0,
+      surfboardQty: 0,
       surfboardStart: "", surfboardEnd: "",
-      bicycleStart: "", bicycleEnd: "",
       items: [
         { categoryId: CAR_CATEGORIES.aqua, qty: 1, start: "2026-09-04", end: "2026-09-02" },
       ],
