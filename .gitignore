@@ -11,4 +11,4 @@ graphify-out/
 .agents/
 .vscode/
 opencode.json
-.opencode
+.opencode/
