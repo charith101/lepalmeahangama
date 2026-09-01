@@ -36,7 +36,6 @@ export default async function BookingPage(props: {
   const findByName = (name: string) => equipData.find((e) => e.name === name)
 
   const surf = findByName("Surfboard")
-  const bike = findByName("Bicycle")
 
   const motorbikes = equipData
     .filter((e) => MOTORBIKE_NAMES.has(e.name))
@@ -49,7 +48,6 @@ export default async function BookingPage(props: {
 
   const pricing = {
     surfboardPricePerDay: Number(surf?.price_per_day_usd ?? 25),
-    bicyclePricePerDay: Number(bike?.price_per_day_usd ?? 5),
     transferPrice: Number(routeData[0]?.fixed_price_usd ?? 30),
     surchargePct: Number(settings?.surcharge_pct ?? 5),
     motorbikes,
