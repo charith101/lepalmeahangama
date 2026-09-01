@@ -5,7 +5,7 @@ import { formatCurrency, rentalDays } from "@/lib/utils"
 import { createPayHereBooking } from "@/lib/actions/bookings"
 import { getAvailableRooms } from "@/lib/actions/rooms"
 import { getAvailableUnits } from "@/lib/actions/equipment"
-import { EQUIPMENT_SURFBOARD, EQUIPMENT_BICYCLE, ROUTE_CMB, surfboardTotalForDays, SURFBOARD_TIERS, BOARD_LABEL, BOARD_PRICE_PER_NIGHT } from "@/lib/constants"
+import { EQUIPMENT_SURFBOARD, ROUTE_CMB, surfboardTotalForDays, SURFBOARD_TIERS, BOARD_LABEL, BOARD_PRICE_PER_NIGHT } from "@/lib/constants"
 import type { BoardPlan } from "@/lib/constants"
 import type { RoomSelection } from "./DateStep"
 
@@ -25,16 +25,14 @@ type PaymentReviewProps = {
   grandTotal: number
   guest: { fullName: string; email: string; phone: string; nationality: string; nic_passport: string }
   extras: {
-    surfboardQty: number; bicycleQty: number
+    surfboardQty: number
     surfboardStart: string; surfboardEnd: string
-    bicycleStart: string; bicycleEnd: string
     items: Array<{ categoryId: string; qty: number; start: string; end: string }>
     transferNeeded: boolean; transferDirection: string
     flightNumber: string; transferTime: string
   }
   pricing: {
     surfboardPricePerDay: number
-    bicyclePricePerDay: number
     transferPrice: number
     motorbikes: VehicleCategory[]
     cars: VehicleCategory[]
