@@ -296,6 +296,8 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, c
                 onEnd={setSurfboardEnd}
                 startError={fieldErrors.surfboardStart}
                 endError={fieldErrors.surfboardEnd}
+                onClearStartError={() => setFieldErrors((p) => { const n = { ...p }; delete n.surfboardStart; return n })}
+                onClearEndError={() => setFieldErrors((p) => { const n = { ...p }; delete n.surfboardEnd; return n })}
               />
               <div className="flex items-center gap-2 text-sm font-sans">
                 <span className="text-stone-500 dark:text-stone-400">
@@ -359,6 +361,10 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, c
                 end={motorbikeEnd}
                 onStart={setMotorbikeStart}
                 onEnd={setMotorbikeEnd}
+                startError={fieldErrors[motorbikeModel]}
+                endError={fieldErrors[motorbikeModel]}
+                onClearStartError={() => setFieldErrors((p) => { const n = { ...p }; delete n[motorbikeModel]; return n })}
+                onClearEndError={() => setFieldErrors((p) => { const n = { ...p }; delete n[motorbikeModel]; return n })}
               />
               <div className="flex items-center gap-2 text-sm font-sans">
                 <span className="text-stone-500 dark:text-stone-400">
@@ -422,6 +428,10 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, c
                 end={carEnd}
                 onStart={setCarStart}
                 onEnd={setCarEnd}
+                startError={fieldErrors[carModel]}
+                endError={fieldErrors[carModel]}
+                onClearStartError={() => setFieldErrors((p) => { const n = { ...p }; delete n[carModel]; return n })}
+                onClearEndError={() => setFieldErrors((p) => { const n = { ...p }; delete n[carModel]; return n })}
               />
               <div className="flex items-center gap-2 text-sm font-sans">
                 <span className="text-stone-500 dark:text-stone-400">
