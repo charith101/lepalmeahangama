@@ -75,6 +75,7 @@ function DateRangeField({
               mode="single"
               selected={start ? new Date(start + "T12:00:00") : undefined}
               onSelect={(d) => { onStart(d ? format(d, "yyyy-MM-dd") : ""); }}
+              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
             />
           </PopoverContent>
         </Popover>
@@ -95,7 +96,7 @@ function DateRangeField({
               mode="single"
               selected={end ? new Date(end + "T12:00:00") : undefined}
               onSelect={(d) => { onEnd(d ? format(d, "yyyy-MM-dd") : ""); }}
-              disabled={(date) => !start || date <= new Date(start + "T12:00:00")}
+              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || (start ? date <= new Date(start + "T12:00:00") : false)}
             />
           </PopoverContent>
         </Popover>

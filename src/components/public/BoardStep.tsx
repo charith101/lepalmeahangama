@@ -8,11 +8,12 @@ type BoardStepProps = {
   initialPlan: BoardPlan
   nights: number
   totalRooms: number
+  onChange?: (plan: BoardPlan) => void
   onNext: (plan: BoardPlan) => void
   onBack: () => void
 }
 
-export function BoardStep({ initialPlan, nights, totalRooms, onNext, onBack }: BoardStepProps) {
+export function BoardStep({ initialPlan, nights, totalRooms, onChange, onNext, onBack }: BoardStepProps) {
   const [selected, setSelected] = useState<BoardPlan>(initialPlan)
 
   return (
