@@ -27,10 +27,12 @@ export function PublicNavbar() {
   const isHome = pathname === "/"
 
   const prevPathnameRef = useRef(pathname)
-  if (prevPathnameRef.current !== pathname) {
-    prevPathnameRef.current = pathname
-    if (open) setOpen(false)
-  }
+  useEffect(() => {
+    if (prevPathnameRef.current !== pathname) {
+      queueMicrotask(() => setOpen(false))
+      prevPathnameRef.current = pathname
+    }
+  }, [pathname])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60)

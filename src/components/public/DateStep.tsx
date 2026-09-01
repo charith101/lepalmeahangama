@@ -105,8 +105,10 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
         return () => cancelAnimationFrame(raf)
       }
     } else if (selections.length > 0) {
-      setSelections([])
-      if (mounted.current) syncUp([])
+      queueMicrotask(() => {
+        setSelections([])
+        if (mounted.current) syncUp([])
+      })
     }
   }, [checkIn, checkOut, selections, addSelection, syncUp, defaultCategoryId])
 
