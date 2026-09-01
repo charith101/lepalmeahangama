@@ -15,9 +15,12 @@ export function HeroSection() {
 
   const [mounted, setMounted] = useState(false)
 
+  const datesValid = checkIn !== undefined && checkOut !== undefined && checkOut > checkIn
+
   useEffect(() => { setMounted(true) }, [])
 
   function handleSearch() {
+    if (!datesValid) return
     const params = new URLSearchParams()
     if (checkIn) params.set("checkIn", format(checkIn, "yyyy-MM-dd"))
     if (checkOut) params.set("checkOut", format(checkOut, "yyyy-MM-dd"))
