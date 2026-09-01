@@ -126,14 +126,24 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
   function handleSubmit() {
     if (!checkIn || !checkOut) {
       const errs: { checkIn?: string; checkOut?: string } = {}
-      if (!checkIn) errs.checkIn = "Check-in date is required"
-      if (!checkOut) errs.checkOut = "Check-out date is required"
+      if (!checkIn) errs.checkIn = "Please select a check-in date"
+      if (!checkOut) errs.checkOut = "Please select a check-out date"
       setFieldErrors(errs)
       return
     }
 
     const ci = format(checkIn, "yyyy-MM-dd")
     const co = format(checkOut, "yyyy-MM-dd")
+
+    if (checkOut <= checkIn) {
+      setFieldErrors({ checkOut: "Check-out date must be after check-in date" })
+      return
+    }
+
+    if (selections.length === 0) {
+      setFieldErrors({ selections: "Please select at least one room" })
+      return
+    }
 
     const result = dateStepSchema.safeParse({ checkIn: ci, checkOut: co, roomSelections: selections })
     if (!result.success) {
@@ -151,9 +161,14 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
     for (const sel of selections) {
       const key = `${sel.categoryId}_${ci}_${co}`
       const a = avail[key]
-      if (a?.loading) errs.selections = `Checking availability for ${sel.categoryName}...`
-      else if (a?.count !== null && a.count < sel.quantity) {
-        errs.selections = `Only ${a.count} room(s) available for ${sel.categoryName}. Reduce quantity or remove this category.`
+      if (a?.loading) {
+        errs.selections = `Still checking availability for ${sel.categoryName}. Please wait a moment and try again.`
+      } else if (a?.error) {
+        errs.selections = `Unable to check availability for ${sel.categoryName}. Please try different dates.`
+      } else if (a?.count !== null && a.count !== undefined && a.count < sel.quantity) {
+        errs.selections = a.count === 0
+          ? `Sorry, ${sel.categoryName} is not available for the selected dates. Please choose different dates or remove this room.`
+          : `Only ${a.count} ${sel.categoryName} room${a.count > 1 ? "s" : ""} available for the selected dates. Please reduce the quantity to ${a.count} or less.`
       }
     }
     setFieldErrors(errs)
