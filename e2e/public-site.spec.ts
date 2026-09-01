@@ -17,7 +17,8 @@ test.describe("Public Site — Homepage", () => {
       "ExperiencesSection",
       "NewsletterSection",
     ]
-    for (const _name of sections) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- iterating to verify main is visible per section
+    for (const section of sections) {
       const main = page.locator("main")
       await expect(main).toBeVisible()
     }

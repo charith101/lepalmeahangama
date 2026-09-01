@@ -78,7 +78,7 @@ export default async function DashboardPage() {
     .gte("check_out", today)
 
   const roomStatuses = (roomsData ?? []).map((r) => {
-    const booking = (activeBookingsData ?? []).find((b: any) => b.room_id === r.id)
+    const booking = (activeBookingsData ?? []).find((b) => b.room_id === r.id)
     return {
       id: r.id,
       room_number: r.room_number,
@@ -112,8 +112,8 @@ export default async function DashboardPage() {
     .eq("status", "completed")
     .gte("paid_at", `${monthStartStr}T00:00:00Z`)
 
-  const todayRevenue = (todayPmts ?? []).reduce((s: number, p: any) => s + Number(p.amount_usd || 0), 0)
-  const monthToDate = (monthPmts ?? []).reduce((s: number, p: any) => s + Number(p.amount_usd || 0), 0)
+  const todayRevenue = (todayPmts ?? []).reduce((s, p) => s + Number(p.amount_usd || 0), 0)
+  const monthToDate = (monthPmts ?? []).reduce((s, p) => s + Number(p.amount_usd || 0), 0)
 
   // Revenue: outstanding (issued invoices - paid)
   const { data: issuedInvs } = await supabase
@@ -121,8 +121,8 @@ export default async function DashboardPage() {
     .select("grand_total_usd, booking_id")
     .eq("status", "issued")
 
-  const issuedBids = (issuedInvs ?? []).map((i: any) => i.booking_id).filter(Boolean)
-  let invoicePayments: any[] = []
+  const issuedBids = (issuedInvs ?? []).map((i) => i.booking_id).filter(Boolean)
+  let invoicePayments: { amount_usd: number | null; booking_id: string | null }[] = []
   if (issuedBids.length > 0) {
     const { data: ip } = await supabase
       .from("payments")
@@ -131,8 +131,8 @@ export default async function DashboardPage() {
       .in("booking_id", issuedBids)
     invoicePayments = ip ?? []
   }
-  const invoiceTotal = (issuedInvs ?? []).reduce((s: number, i: any) => s + Number(i.grand_total_usd || 0), 0)
-  const paidOnInvoices = invoicePayments.reduce((s: number, p: any) => s + Number(p.amount_usd || 0), 0)
+  const invoiceTotal = (issuedInvs ?? []).reduce((s, i) => s + Number(i.grand_total_usd || 0), 0)
+  const paidOnInvoices = invoicePayments.reduce((s, p) => s + Number(p.amount_usd || 0), 0)
   const outstanding = Math.max(0, invoiceTotal - paidOnInvoices)
 
   // Shift notes
@@ -182,7 +182,7 @@ export default async function DashboardPage() {
             monthToDate={monthToDate}
             outstanding={outstanding}
           />
-          <ShiftNotes notes={(shiftData ?? []) as any} />
+          <ShiftNotes notes={shiftData ?? []} />
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency } from "@/lib/utils"
 import { chargeSchema } from "@/lib/validations"
 import { postCharge } from "@/lib/actions/billing"
+import type { Database } from "@/lib/supabase/database.types"
 
 const CHARGE_CATEGORIES = ["meal", "late_checkout_fee", "transport", "misc"] as const
 
@@ -52,7 +53,7 @@ export function ChargeForm({ bookingId, onSuccess, onCancel }: { bookingId: stri
     try {
       const { error } = await postCharge(bookingId, {
         description: description.trim(),
-        category: result.data.category as any,
+        category: result.data.category as Database["public"]["Enums"]["charge_category"],
         quantity: result.data.quantity,
         unit_price_usd: result.data.unitPrice,
       })

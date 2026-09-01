@@ -19,7 +19,7 @@ export function OperationsTimeline({ events }: { events: TimelineEvent[] }) {
   if (events.length === 0) {
     return (
       <div>
-        <h2 className="text-lg font-semibold mb-3">Today's Timeline</h2>
+        <h2 className="text-lg font-semibold mb-3">Today&apos;s Timeline</h2>
         <p className="text-sm text-muted-foreground">No events today</p>
       </div>
     )
@@ -27,7 +27,7 @@ export function OperationsTimeline({ events }: { events: TimelineEvent[] }) {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-3">Today's Timeline</h2>
+      <h2 className="text-lg font-semibold mb-3">Today&apos;s Timeline</h2>
       <div className="space-y-0">
         {events.slice(0, 15).map((ev, i) => (
           <div key={ev.id} className="flex gap-3 pb-3 relative">

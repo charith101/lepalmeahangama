@@ -78,10 +78,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
   }, [])
 
   useEffect(() => {
-    if (!checkIn || !checkOut || checkOut <= checkIn) {
-      setAvailableRoomIds(null)
-      return
-    }
+    if (!checkIn || !checkOut || checkOut <= checkIn) return
     let ignore = false
     const fetchAvailable = async () => {
       setLoadingAvailability(true)
@@ -94,7 +91,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
           .lt("check_in", format(checkOut, "yyyy-MM-dd"))
           .gt("check_out", format(checkIn, "yyyy-MM-dd"))
         if (!ignore) {
-          const bookedSet = new Set((booked ?? []).map((b: any) => b.room_id))
+          const bookedSet = new Set((booked ?? []).map((b: { room_id: string }) => b.room_id))
           setAvailableRoomIds(bookedSet)
         }
       } finally {

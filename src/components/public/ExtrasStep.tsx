@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Car, CalendarIcon, Icon, Motorbike, Plane } from "lucide-react"
 import { surfboard } from "@lucide/lab"
 import { format } from "date-fns"
@@ -35,7 +35,6 @@ type ExtrasStepProps = {
   defaultCheckOut: string
   nights: number
   pricing: ExtrasPricing
-  currentTotal: number
   onChange?: (data: ExtrasData) => void
   onNext: (data: ExtrasData) => void
   onBack: () => void
@@ -138,7 +137,7 @@ function QtyStepper({ value, onChange, max = 20 }: { value: number; onChange: (v
   )
 }
 
-export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, currentTotal, onChange, onNext, onBack, initialData }: ExtrasStepProps) {
+export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, onChange, onNext, onBack, initialData }: ExtrasStepProps) {
   const [surfboardQty, setSurfboardQty] = useState(initialData?.surfboardQty ?? 0)
   const [surfboardStart, setSurfboardStart] = useState(initialData?.surfboardStart ?? defaultCheckIn)
   const [surfboardEnd, setSurfboardEnd] = useState(initialData?.surfboardEnd ?? defaultCheckOut)
@@ -161,7 +160,7 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, c
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   // Build items array and fire onChange for real-time price updates
-  function buildExtrasData(): ExtrasData {
+  const buildExtrasData = useCallback((): ExtrasData => {
     const items: ExtrasItem[] = []
     if (motorbikeModel) {
       items.push({ categoryId: motorbikeModel, qty: motorbikeQty, start: motorbikeStart, end: motorbikeEnd })
@@ -179,16 +178,16 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, c
       flightNumber,
       transferTime,
     }
-  }
-
-  useEffect(() => {
-    onChange?.(buildExtrasData())
   }, [
     surfboardQty, surfboardStart, surfboardEnd,
     motorbikeModel, motorbikeQty, motorbikeStart, motorbikeEnd,
     carModel, carQty, carStart, carEnd,
     transferNeeded, transferDirection, flightNumber, transferTime,
   ])
+
+  useEffect(() => {
+    onChange?.(buildExtrasData())
+  }, [buildExtrasData, onChange])
 
   // --- Price calculations ---
   const surfboardDays = rentalDays(surfboardStart, surfboardEnd, nights)

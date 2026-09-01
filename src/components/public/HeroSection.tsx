@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useSyncExternalStore } from "react"
 import { useRouter } from "next/navigation"
 import { CalendarIcon, TreePalm, ChevronDown } from "lucide-react"
 import { format } from "date-fns"
@@ -13,11 +13,13 @@ export function HeroSection() {
   const [checkOut, setCheckOut] = useState<Date | undefined>()
   const [guests, setGuests] = useState("2")
 
-  const [mounted, setMounted] = useState(false)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
 
   const datesValid = checkIn !== undefined && checkOut !== undefined && checkOut > checkIn
-
-  useEffect(() => { setMounted(true) }, [])
 
   function handleSearch() {
     if (!datesValid) return

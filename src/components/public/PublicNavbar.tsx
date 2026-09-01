@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { TreePalm } from "lucide-react"
@@ -17,12 +17,14 @@ const navLinks = [
 export function PublicNavbar() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
   const pathname = usePathname()
   const isDashboard = pathname.startsWith("/dashboard")
   const isHome = pathname === "/"
-
-  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60)
@@ -40,7 +42,7 @@ export function PublicNavbar() {
   }, [open])
 
   useEffect(() => {
-    setOpen(false)
+    setOpen((prev) => (prev ? false : prev))
   }, [pathname])
 
   const scrolledPast = scrolled || !isHome
@@ -56,7 +58,7 @@ export function PublicNavbar() {
           scrolledPast
             ? "bg-white dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800"
             : "bg-transparent"
-        } ${mounted ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}`}
+          } ${mounted ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}`}
       >
         <div className="flex items-center justify-between h-18 px-6 sm:px-12 max-w-8xl mx-auto">
           <Link href={isDashboard ? "/dashboard" : "/"} className="shrink-0">

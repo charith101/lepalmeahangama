@@ -15,28 +15,28 @@ export default async function OperationsPage() {
   ])
 
   const timelineEvents = [
-    ...(arrRes.data ?? []).map((b: any) => ({
+    ...(arrRes.data ?? []).map((b) => ({
       id: `arr-${b.id}`,
       type: "arrival" as const,
       time: "14:00",
       title: `${b.guests?.full_name ?? "Guest"} — Room ${b.rooms?.room_number ?? "?"}`,
       subtitle: "Check-in today",
     })),
-    ...(depRes.data ?? []).map((b: any) => ({
+    ...(depRes.data ?? []).map((b) => ({
       id: `dep-${b.id}`,
       type: "departure" as const,
       time: "11:00",
       title: `${b.guests?.full_name ?? "Guest"} — Room ${b.rooms?.room_number ?? "?"}`,
       subtitle: "Check-out today",
     })),
-    ...(transferRes.data ?? []).map((t: any) => ({
+    ...(transferRes.data ?? []).map((t) => ({
       id: `trn-${t.id}`,
       type: "transfer" as const,
       time: new Date(t.transfer_datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       title: `${t.guests?.full_name ?? "Guest"} — ${t.direction === "arrival" ? "Arrival" : "Departure"}`,
       subtitle: `${t.airport_transfer_routes?.airport_name ?? "Airport"}${t.flight_number ? ` (${t.flight_number})` : ""}`,
     })),
-    ...(equipRes.data ?? []).map((e: any) => ({
+    ...(equipRes.data ?? []).map((e) => ({
       id: `eq-${e.id}`,
       type: "equipment_return" as const,
       time: "12:00",
@@ -47,7 +47,7 @@ export default async function OperationsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold mb-6">Today's Operations</h1>
+      <h1 className="text-2xl font-semibold mb-6">Today&apos;s Operations</h1>
       <div className="max-w-lg">
         <OperationsTimeline events={timelineEvents} />
       </div>

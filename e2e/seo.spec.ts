@@ -19,19 +19,19 @@ test.describe("SEO — JSON-LD Structured Data", () => {
     const count = await jsonld.count()
     expect(count).toBeGreaterThanOrEqual(1)
 
-    let found = false
-    for (let i = 0; i < count; i++) {
-      const text = await jsonld.nth(i).innerText()
-      const data = JSON.parse(text)
-      if (data["@type"] === "HotelRoom") {
-        found = true
-        expect(data.name).toBeTruthy()
-        expect(data.offers).toBeDefined()
-        expect(data.offers.priceCurrency).toBe("USD")
-        break
+      let hotelRoomFound = false
+      for (let i = 0; i < count; i++) {
+        const text = await jsonld.nth(i).innerText()
+        const data = JSON.parse(text)
+        if (data["@type"] === "HotelRoom") {
+          hotelRoomFound = true
+          expect(data.name).toBeTruthy()
+          expect(data.offers).toBeDefined()
+          expect(data.offers.priceCurrency).toBe("USD")
+          break
+        }
       }
-    }
-    expect(found).toBe(true)
+      expect(hotelRoomFound).toBe(true)
   })
 
   test("booking confirmation page has Order JSON-LD", async ({ page }) => {
@@ -41,12 +41,10 @@ test.describe("SEO — JSON-LD Structured Data", () => {
       const jsonld = page.locator('script[type="application/ld+json"]')
       const count = await jsonld.count()
 
-      let found = false
       for (let i = 0; i < count; i++) {
         const text = await jsonld.nth(i).innerText()
         const data = JSON.parse(text)
         if (data["@type"] === "Order") {
-          found = true
           expect(data.orderNumber).toBeTruthy()
           expect(data.acceptedOffer).toBeDefined()
           break

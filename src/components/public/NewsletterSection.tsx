@@ -23,7 +23,7 @@ export function NewsletterSection() {
             Thank You!
           </h3>
           <p className="text-stone-500 dark:text-stone-400 text-sm font-sans leading-relaxed">
-            You've been subscribed to our newsletter.
+            You&apos;ve been subscribed to our newsletter.
           </p>
         </div>
       </section>

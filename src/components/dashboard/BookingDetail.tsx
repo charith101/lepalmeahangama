@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Separator } from "@/components/ui/separator"
+import type { Database } from "@/lib/supabase/database.types"
 import { formatCurrency } from "@/lib/utils"
 import { BOARD_LABEL } from "@/lib/constants"
 import { recordPaymentSchema } from "@/lib/validations"
@@ -68,8 +69,8 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
   const [paymentMethod, setPaymentMethod] = useState<string | null>("cash")
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [charges, setCharges] = useState(booking.booking_charges)
-  const [payments, setPayments] = useState(booking.payments)
-  const [invoices, setInvoices] = useState(booking.invoices)
+  const [payments] = useState(booking.payments)
+  const [invoices] = useState(booking.invoices)
   const [showDepositDialog, setShowDepositDialog] = useState(false)
   const [depositAmount, setDepositAmount] = useState("")
   const [showMoveRoomDialog, setShowMoveRoomDialog] = useState(false)
@@ -106,7 +107,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
         const { error } = await cancelBooking(booking.id)
         if (error) throw new Error(error)
       } else {
-        const { error } = await updateBookingStatus(booking.id, action as any)
+        const { error } = await updateBookingStatus(booking.id, action as Database["public"]["Enums"]["booking_status"])
         if (error) throw new Error(error)
       }
       toast.success(`Booking ${action.replace("_", " ")}`)
@@ -304,10 +305,10 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
   useEffect(() => {
     if (!showMoveRoomDialog) return
     let ignore = false
-    setLoadingRooms(true)
-    setAvailableRooms([])
-    setSelectedRoomId("")
     ;(async () => {
+      setLoadingRooms(true)
+      setAvailableRooms([])
+      setSelectedRoomId("")
       const supabase = (await import("@/lib/supabase/client")).createClient()
       const { data: conflictRows } = await supabase
         .from("bookings")
@@ -317,14 +318,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
         .gt("check_out", booking.check_in)
         .neq("id", booking.id)
       if (ignore) return
-      const booked = new Set((conflictRows ?? []).map((b: any) => b.room_id))
-      const { data: rooms } = await supabase
-        .from("bookings")
-        .select("room_id")
-        .in("status", ["confirmed", "checked_in", "pending_payment"])
-        .lt("check_in", booking.check_out)
-        .gt("check_out", booking.check_in)
-      if (ignore) return
+      const booked = new Set((conflictRows ?? []).map((b: { room_id: string }) => b.room_id))
       const { data: allRooms } = await supabase
         .from("rooms")
         .select("*, room_categories(name)")
@@ -332,12 +326,12 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
         .eq("operational_status", "active")
         .order("room_number")
       if (!ignore) {
-        setAvailableRooms((allRooms ?? []).filter((r) => !booked.has(r.id)) as any[])
+        setAvailableRooms((allRooms ?? []).filter((r) => !booked.has(r.id)))
         setLoadingRooms(false)
       }
     })()
     return () => { ignore = true }
-  }, [showMoveRoomDialog])
+  }, [showMoveRoomDialog, booking.id, booking.check_in, booking.check_out, booking.rooms.id])
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">

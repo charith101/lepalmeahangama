@@ -283,7 +283,6 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
           defaultCheckOut={data.checkOut}
           nights={nights}
           pricing={extrasPricing(pricing)}
-          currentTotal={roomTotal + boardTotal}
           onChange={(extras) => setLiveExtras(extras)}
           initialData={data.extras}
           onNext={(extras) => {

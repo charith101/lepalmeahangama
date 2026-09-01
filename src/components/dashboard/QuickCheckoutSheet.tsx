@@ -23,17 +23,23 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { createClient } from "@/lib/supabase/client"
+import type { Database } from "@/lib/supabase/database.types"
 import { formatCurrency } from "@/lib/utils"
+
+type BookingRow = Database["public"]["Tables"]["bookings"]["Row"]
+type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"]
+type ChargeRow = Database["public"]["Tables"]["booking_charges"]["Row"]
+type PaymentRow = Database["public"]["Tables"]["payments"]["Row"]
 
 export function QuickCheckoutSheet() {
   const router = useRouter()
   const supabase = createClient()
   const [open, setOpen] = useState(false)
-  const [bookings, setBookings] = useState<any[] | null>(null)
+  const [bookings, setBookings] = useState<Array<Pick<BookingRow, "id"> & { guests: { full_name: string } | null; rooms: { room_number: string } | null }> | null>(null)
   const [selectedId, setSelectedId] = useState("")
-  const [invoiceData, setInvoiceData] = useState<any>(null)
-  const [charges, setCharges] = useState<any[]>([])
-  const [payments, setPayments] = useState<any[]>([])
+  const [invoiceData, setInvoiceData] = useState<InvoiceRow | null>(null)
+  const [charges, setCharges] = useState<ChargeRow[]>([])
+  const [payments, setPayments] = useState<PaymentRow[]>([])
   const [loading, setLoading] = useState(false)
   const [collectPayment, setCollectPayment] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState("")
@@ -50,18 +56,12 @@ export function QuickCheckoutSheet() {
       .order("check_in")
       .then(({ data, error }) => {
         if (error) toast.error("Failed to load bookings")
-        else setBookings(data as any[])
+        else setBookings(data as typeof bookings)
       })
   }, [open, supabase])
 
   useEffect(() => {
-    if (!selectedId || selectedId.startsWith("_")) {
-      setInvoiceData(null)
-      setCharges([])
-      setPayments([])
-      setCollectPayment(false)
-      return
-    }
+    if (!selectedId || selectedId.startsWith("_")) return
     const fetchDetails = async () => {
       const [invRes, chgRes, payRes] = await Promise.all([
         supabase.from("invoices").select("*").eq("booking_id", selectedId).maybeSingle(),
@@ -77,23 +77,21 @@ export function QuickCheckoutSheet() {
   }, [selectedId, supabase])
 
   const roomTotal = invoiceData?.room_charges_total_usd ?? 0
-  const addonTotal = invoiceData?.addon_charges_total_usd ?? charges.reduce((s: number, c: any) => s + Number(c.line_total_usd || 0), 0)
+  const addonTotal = invoiceData?.addon_charges_total_usd ?? charges.reduce((s, c) => s + Number(c.line_total_usd || 0), 0)
   const surchargePct = invoiceData?.surcharge_pct_applied ?? 0
   const grandTotal = roomTotal + addonTotal + (roomTotal + addonTotal) * (surchargePct / 100)
-  const paidTotal = payments.filter((p: any) => p.status === "completed").reduce((s: number, p: any) => s + Number(p.amount_usd || 0), 0)
+  const paidTotal = payments.filter((p) => p.status === "completed").reduce((s, p) => s + Number(p.amount_usd || 0), 0)
   const balanceDue = Math.max(0, grandTotal - paidTotal)
 
   async function handleCheckout() {
     if (!selectedId || selectedId.startsWith("_")) { toast.error("Select a booking"); return }
     setLoading(true)
     try {
-      const updates: any[] = []
-
       if (collectPayment && parseFloat(paymentAmount) > 0) {
         const { error: payErr } = await supabase.from("payments").insert({
           booking_id: selectedId,
           amount_usd: parseFloat(paymentAmount),
-          method: paymentMethod as any,
+          method: paymentMethod as Database["public"]["Enums"]["payment_method"],
           status: "completed",
           paid_at: new Date().toISOString(),
         })
@@ -139,7 +137,7 @@ export function QuickCheckoutSheet() {
                 ) : bookings.length === 0 ? (
                   <SelectItem value="_empty" disabled>No checked-in guests</SelectItem>
                 ) : (
-                  bookings.map((b: any) => (
+                  bookings.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.rooms?.room_number ?? "?"} — {b.guests?.full_name ?? "Unknown"}
                     </SelectItem>

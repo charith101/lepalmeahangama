@@ -24,8 +24,8 @@ export default async function GuestDetailPage({
     .eq("guest_id", id)
     .order("check_in", { ascending: false })
 
-  const bookingIds = (bookings ?? []).map((b: any) => b.id)
-  let paymentsData: any[] = []
+  const bookingIds = (bookings ?? []).map((b) => b.id)
+  let paymentsData: { amount_usd: number | null; status: string }[] = []
   if (bookingIds.length > 0) {
     const { data: pd } = await supabase
       .from("payments")
@@ -35,7 +35,7 @@ export default async function GuestDetailPage({
   }
 
   const totalSpent = (bookings ?? []).reduce(
-    (s, b: any) => s + Number(b.room_total_usd || 0), 0
+    (s, b) => s + Number(b.room_total_usd || 0), 0
   )
   const totalPaid = paymentsData
     .filter((p) => p.status === "completed")

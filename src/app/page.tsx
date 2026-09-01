@@ -5,7 +5,6 @@ import { RoomShowcase } from "@/components/public/RoomShowcase"
 import { RestaurantSection } from "@/components/public/RestaurantSection"
 import { ExperiencesSection } from "@/components/public/ExperiencesSection"
 import { EventsSection } from "@/components/public/EventsSection"
-import { NewsletterSection } from "@/components/public/NewsletterSection"
 
 export default function HomePage() {
   return (

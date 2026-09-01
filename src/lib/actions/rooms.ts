@@ -58,7 +58,7 @@ export async function getAllAvailableRooms(checkIn: string, checkOut: string) {
     .lt("check_in", checkOut)
     .gt("check_out", checkIn)
 
-  const booked = new Set((bookedRoomIds ?? []).map((b: any) => b.room_id))
+  const booked = new Set((bookedRoomIds ?? []).map((b) => b.room_id))
   const { data, error } = await supabase
     .from("rooms")
     .select("*, room_categories(name)")

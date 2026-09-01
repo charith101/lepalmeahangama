@@ -110,7 +110,7 @@ export function GuestProfile({ data }: { data: GuestProfileData }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.bookings.map((b: any) => (
+                {data.bookings.map((b) => (
                   <TableRow key={b.id} className="cursor-pointer" onClick={() => router.push(`/dashboard/bookings/${b.id}`)}>
                     <TableCell className="font-medium">
                       {b.rooms?.room_number ?? "—"} {b.rooms?.room_categories?.name ?? ""}

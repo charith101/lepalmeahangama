@@ -101,11 +101,11 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
           checkAvailability(sel.categoryId, format(checkIn, "yyyy-MM-dd"), format(checkOut, "yyyy-MM-dd"))
         }
       }
-    } else {
+    } else if (selections.length > 0) {
       setSelections([])
       if (mounted.current) syncUp([])
     }
-  }, [checkIn, checkOut])
+  }, [checkIn, checkOut, selections, addSelection, syncUp])
 
   useEffect(() => {
     mounted.current = true

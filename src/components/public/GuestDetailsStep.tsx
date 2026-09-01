@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { guestSchema, type GuestData } from "@/lib/validations"
@@ -14,7 +13,7 @@ type GuestDetailsStepProps = {
 }
 
 export function GuestDetailsStep({ onNext, onBack, initialData }: GuestDetailsStepProps) {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<GuestData>({
+  const { register, handleSubmit, formState: { errors } } = useForm<GuestData>({
     resolver: zodResolver(guestSchema),
     defaultValues: {
       fullName: initialData?.fullName ?? "",
