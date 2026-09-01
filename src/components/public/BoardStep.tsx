@@ -33,7 +33,7 @@ export function BoardStep({ initialPlan, nights, totalRooms, onChange, onNext, o
             <button
               key={plan.key}
               type="button"
-              onClick={() => setSelected(plan.key)}
+              onClick={() => { setSelected(plan.key); onChange?.(plan.key) }}
               className={cn(
                 "w-full text-left border p-4 transition-colors",
                 isSelected
