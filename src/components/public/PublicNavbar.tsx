@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useSyncExternalStore } from "react"
+import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { TreePalm } from "lucide-react"
@@ -26,6 +26,12 @@ export function PublicNavbar() {
   const isDashboard = pathname.startsWith("/dashboard")
   const isHome = pathname === "/"
 
+  const prevPathnameRef = useRef(pathname)
+  if (prevPathnameRef.current !== pathname) {
+    prevPathnameRef.current = pathname
+    if (open) setOpen(false)
+  }
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60)
     window.addEventListener("scroll", onScroll, { passive: true })
@@ -40,10 +46,6 @@ export function PublicNavbar() {
     }
     return () => { document.body.style.overflow = "" }
   }, [open])
-
-  useEffect(() => {
-    setOpen((prev) => (prev ? false : prev))
-  }, [pathname])
 
   const scrolledPast = scrolled || !isHome
 

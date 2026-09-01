@@ -96,16 +96,19 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
       if (defaultCategoryId && !initialized.current) {
         initialized.current = true
         addSelection(defaultCategoryId)
-      } else {
-        for (const sel of selections) {
-          checkAvailability(sel.categoryId, format(checkIn, "yyyy-MM-dd"), format(checkOut, "yyyy-MM-dd"))
-        }
+      } else if (selections.length > 0) {
+        const raf = requestAnimationFrame(() => {
+          for (const sel of selections) {
+            checkAvailability(sel.categoryId, format(checkIn, "yyyy-MM-dd"), format(checkOut, "yyyy-MM-dd"))
+          }
+        })
+        return () => cancelAnimationFrame(raf)
       }
     } else if (selections.length > 0) {
       setSelections([])
       if (mounted.current) syncUp([])
     }
-  }, [checkIn, checkOut, selections, addSelection, syncUp])
+  }, [checkIn, checkOut, selections, addSelection, syncUp, defaultCategoryId])
 
   useEffect(() => {
     mounted.current = true
