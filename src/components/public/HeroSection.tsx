@@ -117,7 +117,7 @@ export function HeroSection() {
                     mode="single"
                     selected={checkOut}
                     onSelect={setCheckOut}
-                    disabled={(date) => !checkIn || date <= checkIn}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || (checkIn ? date <= checkIn : false)}
                   />
                 </PopoverContent>
               </Popover>

@@ -221,7 +221,7 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
                 mode="single"
                 selected={checkOut}
                 onSelect={(d) => { setCheckOut(d); setFieldErrors((p) => ({ ...p, checkOut: undefined })); syncUp(selections, { checkOut: d ? format(d, "yyyy-MM-dd") : "" }) }}
-                disabled={(date) => !checkIn || date <= checkIn}
+                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || (checkIn ? date <= checkIn : false)}
               />
             </PopoverContent>
           </Popover>
