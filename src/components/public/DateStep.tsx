@@ -210,7 +210,7 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
               <Calendar
                 mode="single"
                 selected={checkIn}
-                onSelect={(d) => { setCheckIn(d); setFieldErrors((p) => ({ ...p, checkIn: undefined })); syncUp(selections, { checkIn: d ? format(d, "yyyy-MM-dd") : "" }) }}
+                onSelect={(d) => { setCheckIn(d); setFieldErrors({}); syncUp(selections, { checkIn: d ? format(d, "yyyy-MM-dd") : "" }) }}
                 disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
               />
             </PopoverContent>
@@ -235,7 +235,7 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
               <Calendar
                 mode="single"
                 selected={checkOut}
-                onSelect={(d) => { setCheckOut(d); setFieldErrors((p) => ({ ...p, checkOut: undefined })); syncUp(selections, { checkOut: d ? format(d, "yyyy-MM-dd") : "" }) }}
+                onSelect={(d) => { setCheckOut(d); setFieldErrors({}); syncUp(selections, { checkOut: d ? format(d, "yyyy-MM-dd") : "" }) }}
                 disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || (checkIn ? date <= checkIn : false)}
               />
             </PopoverContent>
