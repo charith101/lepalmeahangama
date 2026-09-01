@@ -201,7 +201,7 @@ export function QuickCheckoutSheet() {
                     className="h-8 text-sm"
                   />
                   <div className="flex gap-1.5 flex-wrap">
-                    {(["cash", "bank_transfer", "card_payhere", "card_polar"] as const).map((m) => (
+                    {(["cash", "bank_transfer", "card_payhere"] as const).map((m) => (
                       <Button
                         key={m}
                         variant={paymentMethod === m ? "default" : "outline"}

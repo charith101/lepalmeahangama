@@ -16,6 +16,16 @@ export async function requireStaff(): Promise<AuthResult> {
   return { user: { id: user.id, role: profile.role } }
 }
 
+export async function requireAnyStaff(): Promise<AuthResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+  const { data: profile } = await supabase
+    .from("profiles").select("role").eq("id", user.id).single()
+  if (!profile) return { error: "Staff profile not found" }
+  return { user: { id: user.id, role: profile.role } }
+}
+
 export async function requireAdmin(): Promise<AuthResult> {
   const result = await requireStaff()
   if ("error" in result) return result

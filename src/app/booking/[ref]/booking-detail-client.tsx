@@ -1,10 +1,11 @@
 "use client"
 
 import { format, parseISO } from "date-fns"
-import { Palmtree, CalendarDays, User, MapPin, Phone, Mail, Hash, FileText } from "lucide-react"
+import { Palmtree, CalendarDays, User, MapPin, Phone, Mail, Hash, FileText, Utensils, Bike } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
+import { BOARD_LABEL } from "@/lib/constants"
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   pending_payment: { label: "Pending Payment", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
@@ -23,6 +24,8 @@ type BookingData = Record<string, any> & {
   status: string
   source: string
   room_total_usd: number | null
+  board_plan: string | null
+  board_total_usd: number | null
   num_guests: number | null
   notes: string | null
   created_at: string
@@ -38,6 +41,18 @@ type BookingData = Record<string, any> & {
     room_number: string
     room_categories: { name: string } | null
   } | null
+  equipment_bookings: Array<{
+    start_date: string
+    end_date: string
+    price_usd: number | null
+    equipment_units: { unit_label: string; equipment_categories: { name: string } } | null
+  }> | null
+  airport_transfers: Array<{
+    direction: string
+    flight_number: string | null
+    transfer_datetime: string
+    price_usd: number | null
+  }> | null
 }
 
 export function BookingDetailClient({ bookings }: { bookings: BookingData[] }) {
@@ -130,6 +145,16 @@ export function BookingDetailClient({ bookings }: { bookings: BookingData[] }) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
+                      <Utensils className="size-4 shrink-0" />
+                      <div>
+                        <p className="font-medium text-ink dark:text-on-primary">Board Plan</p>
+                        <p>
+                          {booking.board_plan ? BOARD_LABEL(booking.board_plan) : "—"}
+                          {Number(booking.board_total_usd) > 0 ? ` (${formatCurrency(Number(booking.board_total_usd))})` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <MapPin className="size-4 shrink-0" />
                       <div>
                         <p className="font-medium text-ink dark:text-on-primary">Source</p>
@@ -142,6 +167,40 @@ export function BookingDetailClient({ bookings }: { bookings: BookingData[] }) {
             </Card>
           )
         })}
+
+        {(bookings.some((b) => (b.equipment_bookings?.length ?? 0) > 0) || bookings.some((b) => (b.airport_transfers?.length ?? 0) > 0)) && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg font-medium text-ink dark:text-on-primary">Activities &amp; Extras</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {bookings.flatMap((b) => (b.equipment_bookings ?? []).map((eq) => {
+                  const name = eq.equipment_units?.equipment_categories?.name ?? "Equipment"
+                  const label = eq.equipment_units?.unit_label ?? name
+                  return (
+                    <div key={`${b.id}-${label}`} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Bike className="size-4 shrink-0" />
+                        {label} &middot; {eq.start_date} &rarr; {eq.end_date}
+                      </span>
+                      <span className="text-ink dark:text-on-primary">{eq.price_usd ? formatCurrency(eq.price_usd) : "—"}</span>
+                    </div>
+                  )
+                }))}
+                {bookings.flatMap((b) => (b.airport_transfers ?? []).map((t) => (
+                  <div key={`${b.id}-${t.transfer_datetime}`} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="flex items-center gap-2 text-muted-foreground capitalize">
+                      <MapPin className="size-4 shrink-0" />
+                      Transfer ({t.direction}){t.flight_number ? ` &middot; ${t.flight_number}` : ""} &middot; {t.transfer_datetime}
+                    </span>
+                    <span className="text-ink dark:text-on-primary">{t.price_usd ? formatCurrency(t.price_usd) : "—"}</span>
+                  </div>
+                )))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="mb-6">
           <CardHeader>

@@ -34,23 +34,30 @@ export const dateStepSchema = z.object({
   path: ["checkOut"],
 })
 
+const dateRangeRefine = (start?: string, end?: string) => {
+  if (start && end) return new Date(end) > new Date(start)
+  return true
+}
+
+export const boardPlanSchema = z.enum(["room_only", "half_board", "full_board"])
+
 export const extrasSchema = z.object({
   surfboardQty: z.number().int().min(0).max(20),
   bicycleQty: z.number().int().min(0).max(20),
-  equipmentStart: z.string(),
-  equipmentEnd: z.string(),
+  surfboardStart: z.string(),
+  surfboardEnd: z.string(),
+  bicycleStart: z.string(),
+  bicycleEnd: z.string(),
   transferNeeded: z.boolean(),
   transferDirection: z.enum(["arrival", "departure"]),
   flightNumber: z.string().max(50, "Flight number must be 50 characters or less"),
   transferTime: z.string(),
-}).refine((data) => {
-  if (data.equipmentStart && data.equipmentEnd) {
-    return new Date(data.equipmentEnd) > new Date(data.equipmentStart)
-  }
-  return true
-}, {
-  message: "Equipment end date must be after start date",
-  path: ["equipmentEnd"],
+}).refine((data) => dateRangeRefine(data.surfboardStart, data.surfboardEnd), {
+  message: "Surfboard end date must be after start date",
+  path: ["surfboardEnd"],
+}).refine((data) => dateRangeRefine(data.bicycleStart, data.bicycleEnd), {
+  message: "Bicycle end date must be after start date",
+  path: ["bicycleEnd"],
 }).refine((data) => {
   if (data.transferNeeded && !data.transferTime) return false
   return true
@@ -133,7 +140,7 @@ export const transferSchema = z.object({
 
 export const recordPaymentSchema = z.object({
   amount: z.number().positive("Amount must be greater than 0"),
-  method: z.enum(["cash", "bank_transfer", "card_payhere", "card_polar"]),
+  method: z.enum(["cash", "bank_transfer", "card_payhere"]),
 })
 
 export const settingsSchema = z.object({

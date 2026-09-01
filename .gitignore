@@ -10,3 +10,5 @@ test-results/
 graphify-out/
 .agents/
 .vscode/
+opencode.json
+.opencode/

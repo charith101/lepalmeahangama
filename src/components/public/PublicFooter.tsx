@@ -1,6 +1,13 @@
+"use client"
+
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 export function PublicFooter() {
+  const pathname = usePathname()
+
+  if (pathname.startsWith("/dashboard")) return null
+
   return (
     <footer className="bg-stone-900 dark:bg-black text-stone-400 dark:text-stone-500">
       <div className="max-w-6xl mx-auto px-6 pt-20 pb-8">
@@ -28,6 +35,14 @@ export function PublicFooter() {
               <Link href="/experiences" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Experiences</Link>
               <Link href="/booking/lookup" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Manage Booking</Link>
               <Link href="/contact" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Contact</Link>
+            </div>
+          </div>
+          <div>
+            <h4 className="text-white dark:text-stone-100 text-xs font-sans font-medium uppercase tracking-[0.15em] mb-5">Legal</h4>
+            <div className="space-y-2.5 text-sm font-sans">
+              <Link href="/refund-policy" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Refund Policy</Link>
+              <Link href="/privacy-policy" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Privacy Policy</Link>
+              <Link href="/terms-and-conditions" className="block hover:text-white dark:hover:text-stone-100 transition-colors">Terms &amp; Conditions</Link>
             </div>
           </div>
           {/* <div>

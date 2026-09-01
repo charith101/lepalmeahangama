@@ -5,3 +5,18 @@ export const CATEGORY_BUDGET = "a9dde668-cc67-483b-ad82-bb38e4e266b9"
 export const ROUTE_CMB = "4f4afe58-cd2d-4c92-a55e-4bfa33c32c7e"
 export const EQUIPMENT_SURFBOARD = "3566e726-1845-4cbb-966a-ba200c105f3a"
 export const EQUIPMENT_BICYCLE = "1d5c15cc-59b3-410c-88a5-562a7b006f4f"
+
+export type BoardPlan = "room_only" | "half_board" | "full_board"
+
+// ponytail: placeholder board plan pricing/descriptions — edit these strings/prices in one place.
+export const BOARD_PLANS: ReadonlyArray<{ key: BoardPlan; label: string; pricePerNight: number; description: string }> = [
+  { key: "room_only", label: "Room Only", pricePerNight: 0, description: "Accommodation only — no meals included." },
+  { key: "half_board", label: "Half Board", pricePerNight: 10, description: "Daily breakfast and dinner at our ocean-view restaurant." },
+  { key: "full_board", label: "Full Board", pricePerNight: 20, description: "Breakfast, lunch, and dinner every day of your stay." },
+]
+
+export const BOARD_LABEL = (plan: string): string =>
+  BOARD_PLANS.find((p) => p.key === plan)?.label ?? "Room Only"
+
+export const BOARD_PRICE_PER_NIGHT = (plan: string): number =>
+  BOARD_PLANS.find((p) => p.key === plan)?.pricePerNight ?? 0

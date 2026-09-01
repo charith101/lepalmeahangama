@@ -13,3 +13,11 @@ export function roundTo(value: number, decimals: number = 2): number {
   const factor = Math.pow(10, decimals)
   return Math.round((value + Number.EPSILON) * factor) / factor
 }
+
+export function rentalDays(start?: string, end?: string, fallback: number = 0): number {
+  if (!start || !end) return Math.max(0, fallback)
+  const startMs = new Date(start + "T12:00:00").getTime()
+  const endMs = new Date(end + "T12:00:00").getTime()
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return Math.max(0, fallback)
+  return Math.max(0, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)))
+}

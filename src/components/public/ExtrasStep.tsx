@@ -12,8 +12,10 @@ import { extrasSchema } from "@/lib/validations"
 export type ExtrasData = {
   surfboardQty: number
   bicycleQty: number
-  equipmentStart: string
-  equipmentEnd: string
+  surfboardStart: string
+  surfboardEnd: string
+  bicycleStart: string
+  bicycleEnd: string
   transferNeeded: boolean
   transferDirection: string
   flightNumber: string
@@ -56,11 +58,74 @@ function QtyStepper({ value, onChange, max = 5 }: { value: number; onChange: (v:
   )
 }
 
+function DateRangeField({
+  label, start, end, onStart, onEnd, startError, endError,
+}: {
+  label: string
+  start: string
+  end: string
+  onStart: (v: string) => void
+  onEnd: (v: string) => void
+  startError?: string
+  endError?: string
+}) {
+  return (
+    <div className="grid sm:grid-cols-2 gap-4">
+      <div data-invalid={!!startError || undefined}>
+        <label className="text-xs font-sans text-stone-500 dark:text-stone-400 mb-1.5 block">{label} start *</label>
+        <Popover>
+          <PopoverTrigger className={cn(
+            "flex h-9 w-full items-center justify-start border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 text-sm font-sans outline-none transition-colors hover:bg-stone-50 dark:hover:bg-stone-800",
+            !start && "text-stone-400 dark:text-stone-500",
+            startError && "border-red-500"
+          )}>
+            <CalendarIcon className="mr-2 size-4 shrink-0 text-stone-400 dark:text-stone-500" />
+            {start ? format(new Date(start + "T12:00:00"), "PPP") : "Pick start date"}
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={start ? new Date(start + "T12:00:00") : undefined}
+              onSelect={(d) => { onStart(d ? format(d, "yyyy-MM-dd") : ""); }}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+      <div data-invalid={!!endError || undefined}>
+        <label className="text-xs font-sans text-stone-500 dark:text-stone-400 mb-1.5 block">{label} end *</label>
+        <Popover>
+          <PopoverTrigger className={cn(
+            "flex h-9 w-full items-center justify-start border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 text-sm font-sans outline-none transition-colors hover:bg-stone-50 dark:hover:bg-stone-800",
+            !end && "text-stone-400 dark:text-stone-500",
+            endError && "border-red-500"
+          )}>
+            <CalendarIcon className="mr-2 size-4 shrink-0 text-stone-400 dark:text-stone-500" />
+            {end ? format(new Date(end + "T12:00:00"), "PPP") : "Pick end date"}
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={end ? new Date(end + "T12:00:00") : undefined}
+              onSelect={(d) => { onEnd(d ? format(d, "yyyy-MM-dd") : ""); }}
+              disabled={(date) => !start || date <= new Date(start + "T12:00:00")}
+            />
+          </PopoverContent>
+        </Popover>
+        {endError && (
+          <p className="mt-1 text-sm text-red-500 font-sans" role="alert">{endError}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function ExtrasStep({ defaultCheckIn, defaultCheckOut, onNext, onBack, initialData }: ExtrasStepProps) {
   const [surfboardQty, setSurfboardQty] = useState(initialData?.surfboardQty ?? 0)
   const [bicycleQty, setBicycleQty] = useState(initialData?.bicycleQty ?? 0)
-  const [equipmentStart, setEquipmentStart] = useState(initialData?.equipmentStart ?? defaultCheckIn)
-  const [equipmentEnd, setEquipmentEnd] = useState(initialData?.equipmentEnd ?? defaultCheckOut)
+  const [surfboardStart, setSurfboardStart] = useState(initialData?.surfboardStart ?? defaultCheckIn)
+  const [surfboardEnd, setSurfboardEnd] = useState(initialData?.surfboardEnd ?? defaultCheckOut)
+  const [bicycleStart, setBicycleStart] = useState(initialData?.bicycleStart ?? defaultCheckIn)
+  const [bicycleEnd, setBicycleEnd] = useState(initialData?.bicycleEnd ?? defaultCheckOut)
   const [transferNeeded, setTransferNeeded] = useState(initialData?.transferNeeded ?? false)
   const [transferDirection, setTransferDirection] = useState(initialData?.transferDirection ?? "arrival")
   const [flightNumber, setFlightNumber] = useState(initialData?.flightNumber ?? "")
@@ -69,7 +134,7 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, onNext, onBack, in
 
   function handleNext() {
     const result = extrasSchema.safeParse({
-      surfboardQty, bicycleQty, equipmentStart, equipmentEnd,
+      surfboardQty, bicycleQty, surfboardStart, surfboardEnd, bicycleStart, bicycleEnd,
       transferNeeded, transferDirection, flightNumber, transferTime,
     })
     if (!result.success) {
@@ -123,52 +188,47 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, onNext, onBack, in
           </div>
         </div>
 
-        {(surfboardQty > 0 || bicycleQty > 0) && (
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div data-invalid={!!fieldErrors.equipmentStart || undefined}>
-              <label className="text-xs font-sans text-stone-500 dark:text-stone-400 mb-1.5 block">Rental start *</label>
-              <Popover>
-                <PopoverTrigger className={cn(
-                  "flex h-9 w-full items-center justify-start border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 text-sm font-sans outline-none transition-colors hover:bg-stone-50 dark:hover:bg-stone-800",
-                  !equipmentStart && "text-stone-400 dark:text-stone-500",
-                  fieldErrors.equipmentStart && "border-red-500"
-                )}>
-                  <CalendarIcon className="mr-2 size-4 shrink-0 text-stone-400 dark:text-stone-500" />
-                  {equipmentStart ? format(new Date(equipmentStart + "T12:00:00"), "PPP") : "Pick start date"}
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={equipmentStart ? new Date(equipmentStart + "T12:00:00") : undefined}
-                    onSelect={(d) => { setEquipmentStart(d ? format(d, "yyyy-MM-dd") : ""); setFieldErrors((p) => ({ ...p, equipmentStart: "" })) }}
-                  />
-                </PopoverContent>
-              </Popover>
+        {surfboardQty > 0 && (
+          <div className="border border-stone-200 dark:border-stone-800 p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="size-10 bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
+                <SurfboardIcon className="size-5 text-stone-900 dark:text-stone-100" />
+              </div>
+              <p className="text-sm font-sans font-medium text-stone-900 dark:text-stone-100">
+                Surfboard rental dates &middot; {surfboardQty} board{surfboardQty > 1 ? "s" : ""}
+              </p>
             </div>
-            <div data-invalid={!!fieldErrors.equipmentEnd || undefined}>
-              <label className="text-xs font-sans text-stone-500 dark:text-stone-400 mb-1.5 block">Rental end *</label>
-              <Popover>
-                <PopoverTrigger className={cn(
-                  "flex h-9 w-full items-center justify-start border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 text-sm font-sans outline-none transition-colors hover:bg-stone-50 dark:hover:bg-stone-800",
-                  !equipmentEnd && "text-stone-400 dark:text-stone-500",
-                  fieldErrors.equipmentEnd && "border-red-500"
-                )}>
-                  <CalendarIcon className="mr-2 size-4 shrink-0 text-stone-400 dark:text-stone-500" />
-                  {equipmentEnd ? format(new Date(equipmentEnd + "T12:00:00"), "PPP") : "Pick end date"}
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={equipmentEnd ? new Date(equipmentEnd + "T12:00:00") : undefined}
-                    onSelect={(d) => { setEquipmentEnd(d ? format(d, "yyyy-MM-dd") : ""); setFieldErrors((p) => ({ ...p, equipmentEnd: "" })) }}
-                    disabled={(date) => !equipmentStart || date <= new Date(equipmentStart + "T12:00:00")}
-                  />
-                </PopoverContent>
-              </Popover>
-              {fieldErrors.equipmentEnd && (
-                <p className="mt-1 text-sm text-red-500 font-sans" role="alert">{fieldErrors.equipmentEnd}</p>
-              )}
+            <DateRangeField
+              label="Rental"
+              start={surfboardStart}
+              end={surfboardEnd}
+              onStart={setSurfboardStart}
+              onEnd={setSurfboardEnd}
+              startError={fieldErrors.surfboardStart}
+              endError={fieldErrors.surfboardEnd}
+            />
+          </div>
+        )}
+
+        {bicycleQty > 0 && (
+          <div className="border border-stone-200 dark:border-stone-800 p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="size-10 bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
+                <Bike className="size-5 text-stone-900 dark:text-stone-100" />
+              </div>
+              <p className="text-sm font-sans font-medium text-stone-900 dark:text-stone-100">
+                Bicycle rental dates &middot; {bicycleQty} bike{bicycleQty > 1 ? "s" : ""}
+              </p>
             </div>
+            <DateRangeField
+              label="Rental"
+              start={bicycleStart}
+              end={bicycleEnd}
+              onStart={setBicycleStart}
+              onEnd={setBicycleEnd}
+              startError={fieldErrors.bicycleStart}
+              endError={fieldErrors.bicycleEnd}
+            />
           </div>
         )}
       </div>

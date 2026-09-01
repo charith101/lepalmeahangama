@@ -1,19 +1,20 @@
 "use client"
 
 import { useState } from "react"
-import { CreditCard } from "lucide-react"
-import { formatCurrency } from "@/lib/utils"
-import { createMultiRoomBooking, createPayHereBooking } from "@/lib/actions/bookings"
+import { formatCurrency, rentalDays } from "@/lib/utils"
+import { createPayHereBooking } from "@/lib/actions/bookings"
 import { getAvailableRooms } from "@/lib/actions/rooms"
 import { getAvailableUnits } from "@/lib/actions/equipment"
-import { EQUIPMENT_SURFBOARD, EQUIPMENT_BICYCLE, ROUTE_CMB } from "@/lib/constants"
+import { EQUIPMENT_SURFBOARD, EQUIPMENT_BICYCLE, ROUTE_CMB, BOARD_LABEL, BOARD_PRICE_PER_NIGHT, type BoardPlan } from "@/lib/constants"
 import type { RoomSelection } from "./DateStep"
 
 type PaymentReviewProps = {
   roomSelections: RoomSelection[]
   checkIn: string
   checkOut: string
+  boardPlan: BoardPlan
   roomTotal: number
+  boardTotal: number
   equipmentTotal: number
   transferTotal: number
   surchargePct: number
@@ -21,7 +22,8 @@ type PaymentReviewProps = {
   guest: { fullName: string; email: string; phone: string; nationality: string; nic_passport: string }
   extras: {
     surfboardQty: number; bicycleQty: number
-    equipmentStart: string; equipmentEnd: string
+    surfboardStart: string; surfboardEnd: string
+    bicycleStart: string; bicycleEnd: string
     transferNeeded: boolean; transferDirection: string
     flightNumber: string; transferTime: string
   }
@@ -33,8 +35,8 @@ type PaymentReviewProps = {
 }
 
 export function PaymentReview({
-  roomSelections, checkIn, checkOut,
-  roomTotal, equipmentTotal, transferTotal, surchargePct, grandTotal,
+  roomSelections, checkIn, checkOut, boardPlan,
+  roomTotal, boardTotal, equipmentTotal, transferTotal, surchargePct, grandTotal,
   guest, extras, pricing, totalRooms, nights, onBack, onSuccess,
 }: PaymentReviewProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "booking" | "error">("idle")
@@ -60,18 +62,24 @@ export function PaymentReview({
 
     const equipment: Array<{ unit_id: string; start_date: string; end_date: string; price_usd: number }> = []
     if (extras.surfboardQty > 0) {
-      const units = await getAvailableUnits(EQUIPMENT_SURFBOARD, extras.equipmentStart || checkIn, extras.equipmentEnd || checkOut)
+      const surfStart = extras.surfboardStart || checkIn
+      const surfEnd = extras.surfboardEnd || checkOut
+      const days = rentalDays(surfStart, surfEnd, nights)
+      const units = await getAvailableUnits(EQUIPMENT_SURFBOARD, surfStart, surfEnd)
       if (units.data) {
         for (let i = 0; i < Math.min(extras.surfboardQty, units.data.length); i++) {
-          equipment.push({ unit_id: units.data[i].id, start_date: extras.equipmentStart || checkIn, end_date: extras.equipmentEnd || checkOut, price_usd: pricing.surfboardPricePerDay * nights })
+          equipment.push({ unit_id: units.data[i].id, start_date: surfStart, end_date: surfEnd, price_usd: pricing.surfboardPricePerDay * days })
         }
       }
     }
     if (extras.bicycleQty > 0) {
-      const units = await getAvailableUnits(EQUIPMENT_BICYCLE, extras.equipmentStart || checkIn, extras.equipmentEnd || checkOut)
+      const bikeStart = extras.bicycleStart || checkIn
+      const bikeEnd = extras.bicycleEnd || checkOut
+      const days = rentalDays(bikeStart, bikeEnd, nights)
+      const units = await getAvailableUnits(EQUIPMENT_BICYCLE, bikeStart, bikeEnd)
       if (units.data) {
         for (let i = 0; i < Math.min(extras.bicycleQty, units.data.length); i++) {
-          equipment.push({ unit_id: units.data[i].id, start_date: extras.equipmentStart || checkIn, end_date: extras.equipmentEnd || checkOut, price_usd: pricing.bicyclePricePerDay * nights })
+          equipment.push({ unit_id: units.data[i].id, start_date: bikeStart, end_date: bikeEnd, price_usd: pricing.bicyclePricePerDay * days })
         }
       }
     }
@@ -83,29 +91,6 @@ export function PaymentReview({
     return { allRooms, equipment, transfer }
   }
 
-  async function handlePay() {
-    setStatus("loading")
-    setError("")
-    try {
-      const { allRooms, equipment, transfer } = await checkAndBuildData()
-      setStatus("booking")
-      const result = await createMultiRoomBooking({
-        guest: { full_name: guest.fullName, email: guest.email || undefined, phone: guest.phone || undefined, nationality: guest.nationality || undefined, nic_or_passport: guest.nic_passport || undefined },
-        roomSelections: allRooms,
-        grand_total_usd: grandTotal,
-        equipment: equipment.length > 0 ? equipment : undefined,
-        transfer,
-      })
-      if (result.error) { setError(result.error); setStatus("idle"); return }
-      if (!result.data?.polarCheckoutUrl) { setError("Failed to initialize payment"); setStatus("idle"); return }
-      onSuccess?.()
-      window.location.href = result.data.polarCheckoutUrl
-    } catch {
-      setError("Something went wrong. Please try again.")
-      setStatus("idle")
-    }
-  }
-
   async function handlePayhere() {
     setStatus("loading")
     setError("")
@@ -115,6 +100,7 @@ export function PaymentReview({
       const result = await createPayHereBooking({
         guest: { full_name: guest.fullName, email: guest.email || undefined, phone: guest.phone || undefined, nationality: guest.nationality || undefined, nic_or_passport: guest.nic_passport || undefined },
         roomSelections: allRooms,
+        board_plan: boardPlan,
         grand_total_usd: grandTotal,
         equipment: equipment.length > 0 ? equipment : undefined,
         transfer,
@@ -198,6 +184,38 @@ export function PaymentReview({
             </p>
           </div>
         ))}
+
+        {extras.surfboardQty > 0 && (
+          <div className="border border-stone-200 dark:border-stone-800 p-3 text-sm font-sans">
+            <div className="flex justify-between">
+              <span className="font-medium text-stone-900 dark:text-stone-100">Surfboard &times; {extras.surfboardQty}</span>
+              <span className="text-stone-900 dark:text-stone-100">
+                {formatCurrency(extras.surfboardQty * pricing.surfboardPricePerDay * rentalDays(extras.surfboardStart || checkIn, extras.surfboardEnd || checkOut, nights))}
+              </span>
+            </div>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{extras.surfboardStart || checkIn} &rarr; {extras.surfboardEnd || checkOut} &middot; {pricing.surfboardPricePerDay}/day</p>
+          </div>
+        )}
+        {extras.bicycleQty > 0 && (
+          <div className="border border-stone-200 dark:border-stone-800 p-3 text-sm font-sans">
+            <div className="flex justify-between">
+              <span className="font-medium text-stone-900 dark:text-stone-100">Bicycle &times; {extras.bicycleQty}</span>
+              <span className="text-stone-900 dark:text-stone-100">
+                {formatCurrency(extras.bicycleQty * pricing.bicyclePricePerDay * rentalDays(extras.bicycleStart || checkIn, extras.bicycleEnd || checkOut, nights))}
+              </span>
+            </div>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{extras.bicycleStart || checkIn} &rarr; {extras.bicycleEnd || checkOut} &middot; {pricing.bicyclePricePerDay}/day</p>
+          </div>
+        )}
+        {extras.transferNeeded && (
+          <div className="border border-stone-200 dark:border-stone-800 p-3 text-sm font-sans">
+            <div className="flex justify-between">
+              <span className="font-medium text-stone-900 dark:text-stone-100">Airport Transfer ({extras.transferDirection})</span>
+              <span className="text-stone-900 dark:text-stone-100">{formatCurrency(transferTotal)}</span>
+            </div>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">CMB &rarr; Ahangama{extras.flightNumber ? ` &middot; Flight ${extras.flightNumber}` : ""}{extras.transferTime ? ` &middot; ${extras.transferTime}` : ""}</p>
+          </div>
+        )}
       </div>
 
       <table className="w-full text-sm font-sans">
@@ -205,6 +223,10 @@ export function PaymentReview({
           <tr className="border-b border-stone-200 dark:border-stone-800">
             <td className="py-2 font-medium text-stone-900 dark:text-stone-100">Room total</td>
             <td className="py-2 text-right text-stone-900 dark:text-stone-100">{formatCurrency(roomTotal)}</td>
+          </tr>
+          <tr className="border-b border-stone-200 dark:border-stone-800">
+            <td className="py-2 font-medium text-stone-900 dark:text-stone-100">{BOARD_LABEL(boardPlan)}</td>
+            <td className="py-2 text-right text-stone-900 dark:text-stone-100">{BOARD_PRICE_PER_NIGHT(boardPlan) > 0 ? `+${formatCurrency(boardTotal)}` : "—"}</td>
           </tr>
           <tr className="border-b border-stone-200 dark:border-stone-800">
             <td className="py-2 font-medium text-stone-900 dark:text-stone-100">Equipment total</td>
@@ -230,28 +252,6 @@ export function PaymentReview({
 
         <div className="border border-stone-200 dark:border-stone-800 p-4">
           <div className="flex items-start gap-3">
-            <CreditCard className="size-5 shrink-0 mt-0.5 text-stone-500 dark:text-stone-400" />
-            <div className="flex-1">
-              <span className="font-medium text-sm font-sans text-stone-900 dark:text-stone-100">Pay with Polar</span>
-              <p className="text-xs font-sans text-stone-500 dark:text-stone-400 mt-0.5">
-                Pay instantly online via Polar. International processing fees may apply.
-              </p>
-            </div>
-          </div>
-
-          {error && <p className="text-sm text-red-500 font-sans mt-3">{error}</p>}
-
-          <button
-            onClick={handlePay}
-            disabled={status !== "idle"}
-            className="w-full py-2.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-200 transition-colors disabled:opacity-50 mt-3"
-          >
-            {status === "loading" ? "Checking availability..." : status === "booking" ? "Creating booking..." : "Pay with Polar"}
-          </button>
-        </div>
-
-        <div className="border border-stone-200 dark:border-stone-800 p-4">
-          <div className="flex items-start gap-3">
             <svg className="size-5 shrink-0 mt-0.5 text-stone-500 dark:text-stone-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2" />
               <path d="M12 9v6" />
@@ -264,6 +264,8 @@ export function PaymentReview({
               </p>
             </div>
           </div>
+
+          {error && <p className="text-sm text-red-500 font-sans mt-3">{error}</p>}
 
           <button
             onClick={handlePayhere}

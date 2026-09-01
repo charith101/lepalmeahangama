@@ -47,6 +47,8 @@ export function PublicNavbar() {
 
   const toggle = useCallback(() => setOpen((v) => !v), [])
 
+  if (isDashboard) return null
+
   return (
     <>
       <nav

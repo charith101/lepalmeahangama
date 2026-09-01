@@ -13,12 +13,13 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Separator } from "@/components/ui/separator"
 import { formatCurrency } from "@/lib/utils"
+import { BOARD_LABEL } from "@/lib/constants"
 import { recordPaymentSchema } from "@/lib/validations"
 import { ChargeForm } from "./ChargeForm"
 import { InvoiceView } from "./InvoiceView"
 import { moveGuestToRoom } from "@/lib/actions/rooms"
 import {
-  checkIn, checkOut, cancelBooking, updateBookingStatus, recordDeposit
+  checkIn, checkOut, cancelBooking, updateBookingStatus, recordDeposit, refundBookingPayment
 } from "@/lib/actions/bookings"
 import { generateInvoice, recordPayment } from "@/lib/actions/billing"
 import { confirmBankTransfer } from "@/lib/actions/billing"
@@ -46,6 +47,8 @@ type Booking = {
   ota_name: string | null
   notes: string | null
   room_total_usd: number | null
+  board_plan: string | null
+  board_total_usd: number | null
   num_guests: number | null
   created_at: string
   guests: { id: string; full_name: string; email: string | null; phone: string | null; nic_or_passport: string | null; nationality: string | null } | null
@@ -126,7 +129,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
     try {
       const { error } = await recordPayment(booking.id, {
         amount_usd: amount,
-        method: paymentMethod as "cash" | "bank_transfer" | "card_payhere" | "card_polar",
+        method: paymentMethod as "cash" | "bank_transfer" | "card_payhere",
         invoice_id: invoice?.id ?? undefined,
       })
       if (error) throw new Error(error)
@@ -367,6 +370,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
             <p><span className="text-muted-foreground">Check-out:</span> {format(new Date(booking.check_out), "PP")}</p>
             <p><span className="text-muted-foreground">Source:</span> {booking.source.replace("_", " ")} {booking.ota_name && `(${booking.ota_name})`}</p>
             <p><span className="text-muted-foreground">Room total:</span> {booking.room_total_usd ? formatCurrency(booking.room_total_usd) : "—"}</p>
+            <p><span className="text-muted-foreground">Board plan:</span> {booking.board_plan ? BOARD_LABEL(booking.board_plan) : "—"}{Number(booking.board_total_usd) > 0 ? ` (${formatCurrency(Number(booking.board_total_usd))})` : ""}</p>
           </CardContent>
         </Card>
       </div>
@@ -470,6 +474,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -479,6 +484,30 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
                     <TableCell className="capitalize">{p.method.replace("_", " ")}</TableCell>
                     <TableCell className="capitalize">{p.status}</TableCell>
                     <TableCell>{p.paid_at ? format(new Date(p.paid_at), "PPp") : "—"}</TableCell>
+                    <TableCell>
+                      {p.method === "card_payhere" && p.status === "completed" && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={actionLoading !== null}
+                          onClick={async () => {
+                            setActionLoading("refund")
+                            try {
+                              const { error } = await refundBookingPayment(booking.id)
+                              if (error) throw new Error(error)
+                              toast.success("Payment refunded via PayHere")
+                              router.refresh()
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Refund failed")
+                            } finally {
+                              setActionLoading(null)
+                            }
+                          }}
+                        >
+                          {actionLoading === "refund" ? "Refunding..." : "Refund"}
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -594,7 +623,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
             <div className="space-y-1">
               <Label>Method</Label>
               <div className="flex gap-2">
-                {(["cash", "bank_transfer", "card_payhere", "card_polar"] as const).map((m) => (
+                {(["cash", "bank_transfer", "card_payhere"] as const).map((m) => (
                   <Button key={m} variant={paymentMethod === m ? "default" : "outline"} size="sm" onClick={() => setPaymentMethod(m)} className="capitalize">
                     {m.replace("_", " ")}
                   </Button>

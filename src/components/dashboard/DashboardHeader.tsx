@@ -3,6 +3,8 @@
 import { MenuIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Clock } from "@/components/dashboard/Clock"
+import { GlobalSearch } from "@/components/dashboard/GlobalSearch"
 
 const roleLabels: Record<string, string> = {
   admin: "Admin",
@@ -27,6 +29,8 @@ export function DashboardHeader({
         <MenuIcon />
       </Button>
       <h1 className="flex-1 text-lg font-semibold">{title}</h1>
+      <Clock />
+      <GlobalSearch />
       <span className="text-sm text-muted-foreground">{staffName}</span>
       <Badge variant="secondary">{roleLabels[role] ?? role}</Badge>
     </header>

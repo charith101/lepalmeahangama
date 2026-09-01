@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { formatCurrency } from "@/lib/utils"
+import { BOARD_LABEL } from "@/lib/constants"
 import { Badge } from "@/components/ui/badge"
 import { bookingOrderSchema } from "@/lib/seo"
 import { CheckCircle } from "lucide-react"
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = createAdminClient()
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, check_in, check_out, room_total_usd, status, rooms(room_number, room_categories(name))")
+    .select("id, check_in, check_out, room_total_usd, board_total_usd, status, rooms(room_number, room_categories(name))")
     .eq("id", id)
     .single()
 
@@ -41,10 +42,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const bookingMeta = booking as unknown as { rooms: { room_number: string; room_categories: { name: string } } | null }
   const metaRoom = bookingMeta.rooms
+  const metaTotal = Number(booking.room_total_usd ?? 0) + Number(booking.board_total_usd ?? 0)
 
   return {
     title: `Booking Confirmed — ${metaRoom?.room_categories?.name || "Room"} — Le Palme Ahangama`,
-    description: `Booking confirmed at Le Palme Ahangama. ${metaRoom?.room_categories?.name || "Room"} from ${booking.check_in} to ${booking.check_out}. Total: ${formatCurrency(Number(booking.room_total_usd ?? 0))}.`,
+    description: `Booking confirmed at Le Palme Ahangama. ${metaRoom?.room_categories?.name || "Room"} from ${booking.check_in} to ${booking.check_out}. Total: ${formatCurrency(metaTotal)}.`,
     robots: { index: false, follow: true },
   }
 }
@@ -55,9 +57,12 @@ export default async function ConfirmationPage({ params }: Props) {
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, check_in, check_out, status, room_total_usd, created_at, group_booking_id, rooms(room_number, room_categories(name)), guests(full_name, email, phone)")
+    .select("id, check_in, check_out, room_total_usd, board_plan, board_total_usd, status, created_at, group_booking_id, rooms(room_number, room_categories(name)), guests(full_name, email, phone), equipment_bookings(equipment_units(equipment_categories(name)), start_date, end_date, price_usd), airport_transfers(direction, flight_number, transfer_datetime, price_usd)")
     .eq("id", id)
     .single()
+
+  const { data: settings } = await supabase
+    .from("settings").select("surcharge_pct").eq("id", true).maybeSingle()
 
   if (!booking) {
     return (
@@ -81,6 +86,16 @@ export default async function ConfirmationPage({ params }: Props) {
   const room = b.rooms
   const guest = b.guests
   const category = room?.room_categories
+
+  type EquipmentRow = { start_date: string; end_date: string; price_usd: number | null; equipment_units: { equipment_categories: { name: string } } | null }
+  type TransferRow = { direction: string; flight_number: string | null; transfer_datetime: string; price_usd: number | null }
+  const rentals = (booking.equipment_bookings ?? []) as unknown as EquipmentRow[]
+  const transfers = (booking.airport_transfers ?? []) as unknown as TransferRow[]
+  const rentalTotal = rentals.reduce((s, r) => s + Number(r.price_usd || 0), 0)
+  const transferTotal = transfers.reduce((s, t) => s + Number(t.price_usd || 0), 0)
+  const surchargePct = Number(settings?.surcharge_pct || 0)
+  const roomTotal = Number(booking.room_total_usd || 0) + Number(booking.board_total_usd || 0) + rentalTotal + transferTotal
+  const grandTotal = roomTotal * (1 + surchargePct / 100)
 
   const schema = bookingOrderSchema(
     booking.id,
@@ -127,6 +142,24 @@ export default async function ConfirmationPage({ params }: Props) {
             <span className="text-sm text-muted-foreground">Check-out</span>
             <span className="text-sm text-ink dark:text-on-primary">{booking.check_out}</span>
           </div>
+          {Number(booking.board_total_usd ?? 0) > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Board plan</span>
+              <span className="text-sm font-medium text-ink dark:text-on-primary">{BOARD_LABEL(booking.board_plan)} &mdash; {formatCurrency(Number(booking.board_total_usd))}</span>
+            </div>
+          )}
+          {rentals.map((eq, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">{eq.equipment_units?.equipment_categories?.name ?? "Equipment"}</span>
+              <span className="text-sm text-ink dark:text-on-primary">{eq.start_date} &rarr; {eq.end_date}{eq.price_usd ? ` &middot; ${formatCurrency(eq.price_usd)}` : ""}</span>
+            </div>
+          ))}
+          {transfers.map((t, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Transfer ({t.direction})</span>
+              <span className="text-sm text-ink dark:text-on-primary">{t.transfer_datetime}{t.flight_number ? ` &middot; ${t.flight_number}` : ""}{t.price_usd ? ` &middot; ${formatCurrency(t.price_usd)}` : ""}</span>
+            </div>
+          ))}
           {guest && (
             <>
               <div className="flex items-center justify-between">
@@ -143,7 +176,7 @@ export default async function ConfirmationPage({ params }: Props) {
           )}
           <div className="flex items-center justify-between border-t border-hairline-light dark:border-hairline-dark pt-4">
             <span className="text-sm font-medium text-ink dark:text-on-primary">Grand Total</span>
-            <span className="text-lg font-light text-ink dark:text-on-primary">{formatCurrency(Number(booking.room_total_usd ?? 0))}</span>
+            <span className="text-lg font-light text-ink dark:text-on-primary">{formatCurrency(grandTotal)}</span>
           </div>
         </div>
 

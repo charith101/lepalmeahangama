@@ -40,7 +40,7 @@ export async function generateInvoice(bookingId: string) {
   const supabase = await createServerClient()
 
   const { data: booking } = await supabase
-    .from("bookings").select("room_total_usd").eq("id", bookingId).single()
+    .from("bookings").select("room_total_usd, board_total_usd").eq("id", bookingId).single()
 
   const { data: eqData } = await supabase
     .from("equipment_bookings").select("price_usd").eq("booking_id", bookingId).eq("status", "active")
@@ -55,7 +55,8 @@ export async function generateInvoice(bookingId: string) {
   const chargeTotal = (chargeData || []).reduce((s, r) => s + Number(r.line_total_usd || 0), 0)
 
   const roomTotal = Number(booking?.room_total_usd || 0)
-  const addonTotal = equipmentTotal + transferTotal + chargeTotal
+  const boardTotal = Number(booking?.board_total_usd || 0)
+  const addonTotal = boardTotal + equipmentTotal + transferTotal + chargeTotal
 
   const { data: settings } = await supabase
     .from("settings").select("surcharge_pct").eq("id", true).single()
