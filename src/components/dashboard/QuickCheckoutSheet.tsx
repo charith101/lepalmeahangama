@@ -127,7 +127,7 @@ export function QuickCheckoutSheet() {
         <div className="flex flex-col gap-4 px-4 pb-4">
           <div className="space-y-2">
             <Label>Booking</Label>
-            <Select value={selectedId} onValueChange={(v) => setSelectedId(v ?? "")} disabled={bookings === null}>
+            <Select value={selectedId} onValueChange={(v) => setSelectedId(v ?? "")} disabled={bookings === null} items={(bookings ?? []).map((b) => ({ value: b.id, label: `${b.rooms?.room_number ?? "?"} — ${b.guests?.full_name ?? "Unknown"}` }))}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder={bookings === null ? "Loading..." : "Select booking"} />
               </SelectTrigger>

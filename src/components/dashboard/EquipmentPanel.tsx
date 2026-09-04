@@ -101,7 +101,7 @@ export function EquipmentPanel({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select value={newRental.categoryId} onValueChange={(v) => { updateField("categoryId", v ?? ""); setNewRental((prev) => ({ ...prev, unitId: "" })) }}>
+                <Select value={newRental.categoryId} onValueChange={(v) => { updateField("categoryId", v ?? ""); setNewRental((prev) => ({ ...prev, unitId: "" })) }} items={categories.map((c) => ({ value: c.id, label: `${c.name} ($${c.price_per_day_usd}/day)` }))}>
                   <SelectTrigger className="w-full" data-invalid={!!fieldErrors.categoryId || undefined}><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (
@@ -114,7 +114,7 @@ export function EquipmentPanel({
               {newRental.categoryId && (
                 <div className="space-y-2">
                   <Label>Unit</Label>
-                  <Select value={newRental.unitId} onValueChange={(v) => updateField("unitId", v ?? "")}>
+                  <Select value={newRental.unitId} onValueChange={(v) => updateField("unitId", v ?? "")} items={availableUnits.map((u) => ({ value: u.id, label: u.unit_label }))}>
                     <SelectTrigger className="w-full" data-invalid={!!fieldErrors.unitId || undefined}><SelectValue placeholder="Select unit" /></SelectTrigger>
                     <SelectContent>
                       {availableUnits.map((u) => (
@@ -127,7 +127,7 @@ export function EquipmentPanel({
               )}
               <div className="space-y-2">
                 <Label>Guest</Label>
-                <Select value={newRental.guestId} onValueChange={(v) => updateField("guestId", v ?? "")}>
+                <Select value={newRental.guestId} onValueChange={(v) => updateField("guestId", v ?? "")} items={guests.map((g) => ({ value: g.id, label: `${g.full_name}${g.email ? ` (${g.email})` : ""}` }))}>
                   <SelectTrigger className="w-full" data-invalid={!!fieldErrors.guestId || undefined}><SelectValue placeholder="Search guest" /></SelectTrigger>
                   <SelectContent>
                     {guests.map((g) => (

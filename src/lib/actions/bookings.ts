@@ -23,6 +23,18 @@ async function validateAndComputeRoomTotal(roomId: string, checkIn: string, chec
   return Number(category.base_price_usd) * nights
 }
 
+async function isRoomAvailable(roomId: string, checkIn: string, checkOut: string, supabase: ReturnType<typeof createAdminClient>): Promise<boolean> {
+  const { data } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("room_id", roomId)
+    .in("status", ["pending_payment", "confirmed", "checked_in"])
+    .lt("check_in", checkOut)
+    .gt("check_out", checkIn)
+    .limit(1)
+  return !data || data.length === 0
+}
+
 export async function createBooking(data: {
   guest_id?: string
   guest?: { full_name: string; email?: string; phone?: string; nationality?: string; nic_or_passport?: string }
@@ -141,6 +153,13 @@ export async function createPayHereBooking(data: {
 
   const supabase = createAdminClient()
 
+  for (const sel of data.roomSelections) {
+    const available = await isRoomAvailable(sel.room_id, sel.check_in, sel.check_out, supabase)
+    if (!available) {
+      return { error: `Room is no longer available for the selected dates. Please go back and choose a different room.` }
+    }
+  }
+
   const { data: guest, error: guestErr } = await supabase
     .from("guests").insert(data.guest).select().single()
   if (guestErr) return { error: guestErr.message }
@@ -178,6 +197,9 @@ export async function createPayHereBooking(data: {
       .single()
 
     if (bookingErr) {
+      if (bookingErr.code === "23P01") {
+        return { error: "Room was just booked by someone else. Please go back and choose a different room or dates." }
+      }
       await supabase.from("guests").delete().eq("id", guest.id)
       return { error: bookingErr.message }
     }

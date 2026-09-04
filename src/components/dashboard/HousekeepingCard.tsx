@@ -104,7 +104,7 @@ export function HousekeepingCard({ roomId, roomNumber, categoryName, status: ini
               </div>
               <div className="space-y-1">
                 <Label>Priority</Label>
-                <Select value={reportPriority} onValueChange={(v) => v && setReportPriority(v)}>
+                <Select value={reportPriority} onValueChange={(v) => v && setReportPriority(v)} items={[{ value: "low", label: "Low" }, { value: "normal", label: "Normal" }, { value: "high", label: "High" }, { value: "urgent", label: "Urgent" }]}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

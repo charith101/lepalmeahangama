@@ -85,7 +85,7 @@ export function ChargeForm({ bookingId, onSuccess, onCancel }: { bookingId: stri
       </div>
       <div className="space-y-2">
         <Label>Category</Label>
-        <Select value={category} onValueChange={setCategory}>
+        <Select value={category} onValueChange={setCategory} items={CHARGE_CATEGORIES.map((c) => ({ value: c, label: c.replace("_", " ") }))}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>

@@ -85,7 +85,7 @@ export function MarkCleanSheet() {
         <div className="flex flex-col gap-4 px-4 pb-4">
           <div className="space-y-2">
             <Label>Room</Label>
-            <Select value={selectedId} onValueChange={(v) => setSelectedId(v ?? "")} disabled={rooms === null}>
+            <Select value={selectedId} onValueChange={(v) => setSelectedId(v ?? "")} disabled={rooms === null} items={(rooms ?? []).map((r) => ({ value: r.id, label: `${r.room_number} — ${r.room_categories.name}` }))}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder={rooms === null ? "Loading..." : "Select room"} />
               </SelectTrigger>

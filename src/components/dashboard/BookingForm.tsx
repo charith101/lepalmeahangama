@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, Trash2Icon, PlusIcon } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -56,10 +56,12 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
   const router = useRouter()
   const supabase = createClient()
 
+  type RoomSelection = { roomId: string; roomNumber: string; categoryName: string }
   const [checkIn, setCheckIn] = useState<Date | undefined>()
   const [checkOut, setCheckOut] = useState<Date | undefined>()
-  const [categoryId, setCategoryId] = useState<string | null>(null)
-  const [roomId, setRoomId] = useState<string | null>(null)
+  const [roomSelections, setRoomSelections] = useState<RoomSelection[]>([])
+  const [addCategoryId, setAddCategoryId] = useState<string | null>(null)
+  const [addRoomId, setAddRoomId] = useState<string | null>(null)
   const [source, setSource] = useState<string | null>("walk_in")
   const [otaName, setOtaName] = useState("")
   const [guestName, setGuestName] = useState("")
@@ -136,15 +138,34 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
     return () => { ignore = true }
   }, [checkIn, checkOut])
 
+  const selectedRoomIds = new Set(roomSelections.map((s) => s.roomId))
   const filteredRooms = rooms.filter((r) => {
-    if (categoryId && r.category_id !== categoryId) return false
+    if (addCategoryId && r.category_id !== addCategoryId) return false
     if (availableRoomIds && availableRoomIds.has(r.id)) return false
+    if (selectedRoomIds.has(r.id)) return false
     return true
   })
 
+  function addRoom() {
+    if (!addRoomId) return
+    const room = rooms.find((r) => r.id === addRoomId)
+    if (!room) return
+    const cat = categories.find((c) => c.id === room.category_id)
+    setRoomSelections((prev) => [...prev, { roomId: room.id, roomNumber: room.room_number, categoryName: cat?.name ?? "Room" }])
+    setAddRoomId(null)
+  }
+
+  function removeRoom(roomId: string) {
+    setRoomSelections((prev) => prev.filter((s) => s.roomId !== roomId))
+  }
+
   function validate(): boolean {
+    if (roomSelections.length === 0) {
+      setFieldErrors({ roomId: "Please add at least one room" })
+      return false
+    }
     const result = dashboardBookingSchema.safeParse({
-      checkIn, checkOut, roomId, source, otaName,
+      checkIn, checkOut, roomId: roomSelections[0].roomId, source, otaName,
       guestName, guestEmail, guestPhone, guestNationality, guestNicPassport, notes, numGuests,
     })
     if (!result.success) {
@@ -247,46 +268,71 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
         (checkOut!.getTime() - checkIn!.getTime()) / (1000 * 60 * 60 * 24)
       ))
 
-      const { data: booking, error: bookingError } = await supabase
-        .from("bookings")
-        .insert({
-          guest_id: guestId,
-          room_id: roomId!,
-          check_in: format(checkIn!, "yyyy-MM-dd"),
-          check_out: format(checkOut!, "yyyy-MM-dd"),
-          status: "confirmed",
-          source: source as "walk_in" | "ota_manual",
-          ota_name: source === "ota_manual" ? otaName.trim() : null,
-          notes: notes.trim() || null,
-          created_by_staff_id: user.user?.id ?? null,
-          num_guests: numGuests,
-          board_plan: boardPlan,
-          board_total_usd: BOARD_PRICE_PER_NIGHT(boardPlan) * nights,
-        })
-        .select("id")
-        .single()
+      const groupBookingId = crypto.randomUUID()
+      const bookingIds: string[] = []
 
-      if (bookingError) throw new Error(bookingError.message)
+      for (const sel of roomSelections) {
+        const { data: conflicts } = await supabase
+          .from("bookings")
+          .select("id")
+          .eq("room_id", sel.roomId)
+          .in("status", ["pending_payment", "confirmed", "checked_in"])
+          .lt("check_in", format(checkOut!, "yyyy-MM-dd"))
+          .gt("check_out", format(checkIn!, "yyyy-MM-dd"))
+          .limit(1)
+
+        if (conflicts && conflicts.length > 0) {
+          throw new Error(`Room ${sel.roomNumber} was just booked by someone else. Please go back and choose a different room or dates.`)
+        }
+
+        const { data: booking, error: bookingError } = await supabase
+          .from("bookings")
+          .insert({
+            guest_id: guestId,
+            room_id: sel.roomId,
+            check_in: format(checkIn!, "yyyy-MM-dd"),
+            check_out: format(checkOut!, "yyyy-MM-dd"),
+            status: "confirmed",
+            source: source as "walk_in" | "ota_manual",
+            ota_name: source === "ota_manual" ? otaName.trim() : null,
+            notes: notes.trim() || null,
+            created_by_staff_id: user.user?.id ?? null,
+            num_guests: numGuests,
+            board_plan: boardPlan,
+            board_total_usd: BOARD_PRICE_PER_NIGHT(boardPlan) * nights,
+            group_booking_id: groupBookingId,
+          })
+          .select("id")
+          .single()
+
+        if (bookingError) {
+          if (bookingError.code === "23P01") {
+            throw new Error(`Room ${sel.roomNumber} was just booked by someone else. Please go back and choose a different room or dates.`)
+          }
+          throw new Error(bookingError.message)
+        }
+        bookingIds.push(booking.id)
+      }
 
       if (surfboardQty > 0) {
         const surfboardDays = rentalDays(surfboardStart, surfboardEnd, Math.max(1, Math.round(
           (checkOut!.getTime() - checkIn!.getTime()) / (1000 * 60 * 60 * 24)
         )))
         const surfboardTotal = surfboardTotalForDays(surfboardDays, prices[EQUIPMENT_SURFBOARD], SURFBOARD_TIERS) * surfboardQty
-        await insertEquipment(EQUIPMENT_SURFBOARD, surfboardQty, surfboardStart, surfboardEnd, prices[EQUIPMENT_SURFBOARD], guestId, booking.id, surfboardTotal)
+        await insertEquipment(EQUIPMENT_SURFBOARD, surfboardQty, surfboardStart, surfboardEnd, prices[EQUIPMENT_SURFBOARD], guestId, bookingIds[0], surfboardTotal)
       }
       if (bicycleQty > 0) {
-        await insertEquipment(EQUIPMENT_BICYCLE, bicycleQty, bicycleStart, bicycleEnd, prices[EQUIPMENT_BICYCLE], guestId, booking.id)
+        await insertEquipment(EQUIPMENT_BICYCLE, bicycleQty, bicycleStart, bicycleEnd, prices[EQUIPMENT_BICYCLE], guestId, bookingIds[0])
       }
       if (motorbikeModel) {
-        await insertEquipment(motorbikeModel, motorbikeQty, motorbikeStart, motorbikeEnd, prices[motorbikeModel], guestId, booking.id)
+        await insertEquipment(motorbikeModel, motorbikeQty, motorbikeStart, motorbikeEnd, prices[motorbikeModel], guestId, bookingIds[0])
       }
       if (carModel) {
-        await insertEquipment(carModel, carQty, carStart, carEnd, prices[carModel], guestId, booking.id)
+        await insertEquipment(carModel, carQty, carStart, carEnd, prices[carModel], guestId, bookingIds[0])
       }
 
-      toast.success("Booking created")
-      router.push("/dashboard/bookings/" + booking.id)
+      toast.success(`Booking created${roomSelections.length > 1 ? ` (${roomSelections.length} rooms)` : ""}`)
+      router.push("/dashboard/bookings/" + bookingIds[0])
       router.refresh()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create booking")
@@ -335,42 +381,54 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Room Category</Label>
-          <Select value={categoryId} onValueChange={(val) => { setCategoryId(val); setRoomId(null) }}>
-            <SelectTrigger>
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="space-y-2" data-invalid={!!fieldErrors.roomId || undefined}>
-          <Label>Room * {checkIn && checkOut && checkOut > checkIn ? (loadingAvailability ? <span className="text-muted-foreground font-normal">loading availability...</span> : <span className="text-muted-foreground font-normal">({filteredRooms.length} available)</span>) : null}</Label>
-          <Select value={roomId} onValueChange={(val) => { setRoomId(val); setFieldErrors((p) => ({ ...p, roomId: "" })) }}>
-            <SelectTrigger data-invalid={!!fieldErrors.roomId || undefined}>
-              <SelectValue placeholder={loadingAvailability ? "Checking availability..." : "Select a room"} />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredRooms.length === 0 ? (
-                <SelectItem value="_none" disabled>No rooms available for selected dates</SelectItem>
-              ) : (
-                filteredRooms.map((r) => (
+          <Label>Rooms *</Label>
+          {roomSelections.length > 0 && (
+            <div className="space-y-2">
+              {roomSelections.map((sel) => (
+                <div key={sel.roomId} className="flex items-center justify-between rounded-lg border border-input px-3 py-2">
+                  <div>
+                    <span className="text-sm font-medium">{sel.roomNumber}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{sel.categoryName}</span>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => removeRoom(sel.roomId)}>
+                    <Trash2Icon className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Select value={addCategoryId} onValueChange={(val) => { setAddCategoryId(val); setAddRoomId(null) }} items={categories.map((c) => ({ value: c.id, label: c.name }))}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={addRoomId} onValueChange={setAddRoomId} disabled={!addCategoryId} items={filteredRooms.map((r) => ({ value: r.id, label: r.room_number }))}>
+              <SelectTrigger>
+                <SelectValue placeholder={loadingAvailability ? "Checking..." : filteredRooms.length === 0 ? "No rooms" : "Select room"} />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredRooms.map((r) => (
                   <SelectItem key={r.id} value={r.id}>{r.room_number}</SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button type="button" variant="outline" size="icon" onClick={addRoom} disabled={!addRoomId}>
+              <PlusIcon className="size-4" />
+            </Button>
+          </div>
           {fieldErrors.roomId && <p className="text-sm text-destructive" role="alert">{fieldErrors.roomId}</p>}
         </div>
 
         <div className="space-y-2">
           <Label>Source</Label>
-          <Select value={source} onValueChange={(val) => setSource(val)}>
+          <Select value={source} onValueChange={(val) => setSource(val)} items={[{ value: "walk_in", label: "Walk-in" }, { value: "ota_manual", label: "OTA (Manual)" }]}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -474,7 +532,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Model *</Label>
-                <Select value={motorbikeModel} onValueChange={(val) => { setMotorbikeModel(val); setFieldErrors((p) => ({ ...p, motorbikeEnd: "" })) }}>
+                <Select value={motorbikeModel} onValueChange={(val) => { setMotorbikeModel(val); setFieldErrors((p) => ({ ...p, motorbikeEnd: "" })) }} items={MOTORBIKE_OPTIONS.map((m) => ({ value: m.id, label: `${m.name} — ${prices[m.id] > 0 ? `$${prices[m.id]}` : "..."}/day` }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select model" />
                   </SelectTrigger>
@@ -512,7 +570,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Model *</Label>
-                <Select value={carModel} onValueChange={(val) => { setCarModel(val); setFieldErrors((p) => ({ ...p, carEnd: "" })) }}>
+                <Select value={carModel} onValueChange={(val) => { setCarModel(val); setFieldErrors((p) => ({ ...p, carEnd: "" })) }} items={CAR_OPTIONS.map((c) => ({ value: c.id, label: `${c.name} — ${prices[c.id] > 0 ? `$${prices[c.id]}` : "..."}/day` }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select model" />
                   </SelectTrigger>

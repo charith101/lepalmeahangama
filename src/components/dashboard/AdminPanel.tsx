@@ -263,7 +263,7 @@ export function AdminPanel({
             onChange={(e) => setNewRoomNumber(e.target.value)}
             className="w-40"
           />
-          <Select value={newRoomCategory} onValueChange={(v) => setNewRoomCategory(v ?? "")}>
+          <Select value={newRoomCategory} onValueChange={(v) => setNewRoomCategory(v ?? "")} items={categories.map((c) => ({ value: c.id, label: c.name }))}>
             <SelectTrigger className="w-48"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
               {categories.map((c) => (
@@ -391,7 +391,7 @@ export function AdminPanel({
         </CardContent>
         <CardFooter className="flex items-center gap-3">
           <Input placeholder="Unit label" value={newUnitLabel} onChange={(e) => setNewUnitLabel(e.target.value)} className="w-48" />
-          <Select value={newUnitCategory} onValueChange={(v) => setNewUnitCategory(v ?? "")}>
+          <Select value={newUnitCategory} onValueChange={(v) => setNewUnitCategory(v ?? "")} items={categories.map((c) => ({ value: c.id, label: c.name }))}>
             <SelectTrigger className="w-48"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
               {categories.map((c) => (

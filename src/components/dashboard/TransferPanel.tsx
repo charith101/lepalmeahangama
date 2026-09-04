@@ -104,7 +104,7 @@ export function TransferPanel({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Route</Label>
-                <Select value={newTransfer.routeId} onValueChange={(v) => updateField("routeId", v ?? "")}>
+                <Select value={newTransfer.routeId} onValueChange={(v) => updateField("routeId", v ?? "")} items={routes.map((r) => ({ value: r.id, label: `${r.airport_name} ($${r.fixed_price_usd})` }))}>
                   <SelectTrigger className="w-full" data-invalid={!!fieldErrors.routeId || undefined}><SelectValue placeholder="Select route" /></SelectTrigger>
                   <SelectContent>
                     {routes.map((r) => (
@@ -116,7 +116,7 @@ export function TransferPanel({
               </div>
               <div className="space-y-2">
                 <Label>Guest</Label>
-                <Select value={newTransfer.guestId} onValueChange={(v) => updateField("guestId", v ?? "")}>
+                <Select value={newTransfer.guestId} onValueChange={(v) => updateField("guestId", v ?? "")} items={guests.map((g) => ({ value: g.id, label: g.full_name }))}>
                   <SelectTrigger className="w-full" data-invalid={!!fieldErrors.guestId || undefined}><SelectValue placeholder="Select guest" /></SelectTrigger>
                   <SelectContent>
                     {guests.map((g) => (
@@ -128,7 +128,7 @@ export function TransferPanel({
               </div>
               <div className="space-y-2">
                 <Label>Direction</Label>
-                <Select value={newTransfer.direction} onValueChange={(v) => updateField("direction", (v ?? "arrival"))}>
+                <Select value={newTransfer.direction} onValueChange={(v) => updateField("direction", (v ?? "arrival"))} items={[{ value: "arrival", label: "Arrival (Airport → Hotel)" }, { value: "departure", label: "Departure (Hotel → Airport)" }]}>
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="arrival">Arrival (Airport → Hotel)</SelectItem>
