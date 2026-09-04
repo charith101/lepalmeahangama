@@ -1,6 +1,6 @@
 # Le Palme Ahangama — Hotel PMS
 
-## Important
+## Important - Must Do
 - Make as many subagents as required and do the implementation accurately.
 - Loop over a plan until you get the correct, accurate output.
 - Plan tasks are sequential within each file — do not skip ahead until the current task's verification passes.

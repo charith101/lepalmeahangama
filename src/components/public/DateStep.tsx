@@ -45,6 +45,9 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
   const [avail, setAvail] = useState<Record<string, AvailState>>({})
   const initialized = useRef(false)
   const mounted = useRef(false)
+  const checkAvailabilityRef = useRef<(categoryId: string, ci: string, co: string) => void>(() => {})
+  const syncUpRef = useRef<(roomSelections: RoomSelection[], dates?: { checkIn?: string; checkOut?: string }) => void>(() => {})
+  const addSelectionRef = useRef<(categoryId: string) => void>(() => {})
 
   async function checkAvailability(categoryId: string, ci: string, co: string) {
     const key = `${categoryId}_${ci}_${co}`
@@ -59,6 +62,7 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
       },
     }))
   }
+  checkAvailabilityRef.current = checkAvailability
 
   function syncUp(roomSelections: RoomSelection[], dates?: { checkIn?: string; checkOut?: string }) {
     onChange?.({
@@ -67,6 +71,7 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
       roomSelections,
     })
   }
+  syncUpRef.current = syncUp
 
   function addSelection(categoryId: string) {
     if (!categoryId) return
@@ -90,16 +95,17 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
       checkAvailability(categoryId, format(checkIn, "yyyy-MM-dd"), format(checkOut, "yyyy-MM-dd"))
     }
   }
+  addSelectionRef.current = addSelection
 
   useEffect(() => {
     if (checkIn && checkOut) {
       if (defaultCategoryId && !initialized.current) {
         initialized.current = true
-        addSelection(defaultCategoryId)
+        addSelectionRef.current(defaultCategoryId)
       } else if (selections.length > 0) {
         const raf = requestAnimationFrame(() => {
           for (const sel of selections) {
-            checkAvailability(sel.categoryId, format(checkIn, "yyyy-MM-dd"), format(checkOut, "yyyy-MM-dd"))
+            checkAvailabilityRef.current(sel.categoryId, format(checkIn, "yyyy-MM-dd"), format(checkOut, "yyyy-MM-dd"))
           }
         })
         return () => cancelAnimationFrame(raf)
@@ -107,10 +113,10 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
     } else if (selections.length > 0) {
       queueMicrotask(() => {
         setSelections([])
-        if (mounted.current) syncUp([])
+        if (mounted.current) syncUpRef.current([])
       })
     }
-  }, [checkIn, checkOut, selections, addSelection, syncUp, defaultCategoryId])
+  }, [checkIn, checkOut, selections, defaultCategoryId])
 
   useEffect(() => {
     mounted.current = true
