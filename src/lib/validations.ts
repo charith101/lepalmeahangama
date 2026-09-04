@@ -92,6 +92,9 @@ export const dashboardBookingSchema = z.object({
   guestName: z.string().min(1, "Guest name is required").max(100, "Name must be 100 characters or less"),
   guestEmail: z.string().max(255, "Email must be 255 characters or less").optional().or(z.literal("")),
   guestPhone: z.string().max(50, "Phone must be 50 characters or less").optional().or(z.literal("")),
+  guestNationality: z.string().max(100, "Nationality must be 100 characters or less").optional().or(z.literal("")),
+  guestNicPassport: z.string().max(20, "NIC/Passport must be 20 characters or less").optional().or(z.literal("")),
+  numGuests: z.number().int().min(1).max(20),
   notes: z.string().optional().or(z.literal("")),
 }).refine((data) => {
   if (!data.checkIn || !data.checkOut) return true

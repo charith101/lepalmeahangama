@@ -16,10 +16,27 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cn, rentalDays } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { dashboardBookingSchema } from "@/lib/validations"
-import { BOARD_PLANS, BOARD_PRICE_PER_NIGHT, EQUIPMENT_SURFBOARD, EQUIPMENT_BICYCLE, type BoardPlan } from "@/lib/constants"
+import { BOARD_PLANS, BOARD_PRICE_PER_NIGHT, EQUIPMENT_SURFBOARD, EQUIPMENT_BICYCLE, MOTORBIKE_CATEGORIES, CAR_CATEGORIES, surfboardTotalForDays, SURFBOARD_TIERS, type BoardPlan } from "@/lib/constants"
 
 type Category = { id: string; name: string; base_price_usd: number }
 type Room = { id: string; room_number: string; category_id: string; operational_status: string }
+
+const MOTORBIKE_OPTIONS: Array<{ id: string; name: string }> = [
+  { id: MOTORBIKE_CATEGORIES.tvs_ntorq, name: "TVS Ntorq 135CC" },
+  { id: MOTORBIKE_CATEGORIES.honda_dio, name: "Honda Dio 110CC" },
+  { id: MOTORBIKE_CATEGORIES.honda_navi, name: "Honda Navi 109cc" },
+]
+
+const CAR_OPTIONS: Array<{ id: string; name: string }> = [
+  { id: CAR_CATEGORIES.wagonR, name: "Suzuki WagonR" },
+  { id: CAR_CATEGORIES.hustler, name: "SUZUKI HUSTLER" },
+  { id: CAR_CATEGORIES.aqua, name: "TOYOTA AQUA" },
+  { id: CAR_CATEGORIES.fit_gp5, name: "HONDA FIT GP5" },
+  { id: CAR_CATEGORIES.prius, name: "TOYOTA PRIUS 3RD GEN" },
+  { id: CAR_CATEGORIES.vezel, name: "Honda Vezel" },
+  { id: CAR_CATEGORIES.fit_shuttle, name: "Honda Fit Shuttle" },
+  { id: CAR_CATEGORIES.every, name: "Suzuki Every" },
+]
 
 function QtyStepper({ value, onChange, max = 20 }: { value: number; onChange: (v: number) => void; max?: number }) {
   return (
@@ -56,7 +73,21 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
   const [bicycleQty, setBicycleQty] = useState(0)
   const [bicycleStart, setBicycleStart] = useState("")
   const [bicycleEnd, setBicycleEnd] = useState("")
-  const [prices, setPrices] = useState({ surfboard: 0, bicycle: 0 })
+  const [motorbikeModel, setMotorbikeModel] = useState<string | null>(null)
+  const [motorbikeQty, setMotorbikeQty] = useState(1)
+  const [motorbikeStart, setMotorbikeStart] = useState("")
+  const [motorbikeEnd, setMotorbikeEnd] = useState("")
+  const [carModel, setCarModel] = useState<string | null>(null)
+  const [carQty, setCarQty] = useState(1)
+  const [carStart, setCarStart] = useState("")
+  const [carEnd, setCarEnd] = useState("")
+  const [numGuests, setNumGuests] = useState(1)
+  const [guestNationality, setGuestNationality] = useState("")
+  const [guestNicPassport, setGuestNicPassport] = useState("")
+  const [prices, setPrices] = useState<Record<string, number>>({
+    ...Object.fromEntries(Object.values(MOTORBIKE_CATEGORIES).map((id) => [id, 0])),
+    ...Object.fromEntries(Object.values(CAR_CATEGORIES).map((id) => [id, 0])),
+  })
   const [submitting, setSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [availableRoomIds, setAvailableRoomIds] = useState<Set<string> | null>(null)
@@ -65,14 +96,17 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
   useEffect(() => {
     const loadPricing = async () => {
       const client = (await import("@/lib/supabase/client")).createClient()
-      const [surf, bike] = await Promise.all([
-        client.from("equipment_categories").select("price_per_day_usd").eq("id", EQUIPMENT_SURFBOARD).single(),
-        client.from("equipment_categories").select("price_per_day_usd").eq("id", EQUIPMENT_BICYCLE).single(),
-      ])
-      setPrices({
-        surfboard: Number(surf.data?.price_per_day_usd ?? 0),
-        bicycle: Number(bike.data?.price_per_day_usd ?? 0),
-      })
+      const allIds = [
+        EQUIPMENT_SURFBOARD, EQUIPMENT_BICYCLE,
+        ...Object.values(MOTORBIKE_CATEGORIES),
+        ...Object.values(CAR_CATEGORIES),
+      ]
+      const { data } = await client.from("equipment_categories").select("id, price_per_day_usd").in("id", allIds)
+      const patch: Record<string, number> = {}
+      for (const row of data ?? []) {
+        patch[row.id] = Number(row.price_per_day_usd ?? 0)
+      }
+      setPrices((prev) => ({ ...prev, ...patch }))
     }
     loadPricing()
   }, [])
@@ -111,7 +145,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
   function validate(): boolean {
     const result = dashboardBookingSchema.safeParse({
       checkIn, checkOut, roomId, source, otaName,
-      guestName, guestEmail, guestPhone, notes,
+      guestName, guestEmail, guestPhone, guestNationality, guestNicPassport, notes, numGuests,
     })
     if (!result.success) {
       const errs: Record<string, string> = {}
@@ -139,10 +173,26 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
       setFieldErrors((p) => ({ ...p, bicycleEnd: "End date must be after start date" }))
       return false
     }
+    if (motorbikeModel && (!motorbikeStart || !motorbikeEnd)) {
+      setFieldErrors((p) => ({ ...p, motorbikeEnd: "Rental dates are required" }))
+      return false
+    }
+    if (motorbikeModel && motorbikeEnd <= motorbikeStart) {
+      setFieldErrors((p) => ({ ...p, motorbikeEnd: "End date must be after start date" }))
+      return false
+    }
+    if (carModel && (!carStart || !carEnd)) {
+      setFieldErrors((p) => ({ ...p, carEnd: "Rental dates are required" }))
+      return false
+    }
+    if (carModel && carEnd <= carStart) {
+      setFieldErrors((p) => ({ ...p, carEnd: "End date must be after start date" }))
+      return false
+    }
     return true
   }
 
-  async function insertEquipment(categoryId: string, qty: number, start: string, end: string, perDay: number, guestId: string, bookingId: string) {
+  async function insertEquipment(categoryId: string, qty: number, start: string, end: string, perDay: number, guestId: string, bookingId: string, totalPrice?: number) {
     const { data: units, error } = await supabase.rpc("get_available_equipment_units", {
       p_category_id: categoryId,
       p_start_date: start,
@@ -156,7 +206,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
     const days = rentalDays(start, end, Math.max(1, Math.round(
       (checkOut!.getTime() - checkIn!.getTime()) / (1000 * 60 * 60 * 24)
     )))
-    const price = perDay * days
+    const price = totalPrice ?? perDay * days
     const { error: insertErr } = await supabase.from("equipment_bookings").insert(
       available.slice(0, qty).map((u: { id: string }) => ({
         unit_id: u.id,
@@ -182,6 +232,8 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
           full_name: guestName.trim(),
           email: guestEmail.trim() || null,
           phone: guestPhone.trim() || null,
+          nationality: guestNationality.trim() || null,
+          nic_or_passport: guestNicPassport.trim() || null,
         })
         .select("id")
         .single()
@@ -207,7 +259,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
           ota_name: source === "ota_manual" ? otaName.trim() : null,
           notes: notes.trim() || null,
           created_by_staff_id: user.user?.id ?? null,
-          num_guests: 1,
+          num_guests: numGuests,
           board_plan: boardPlan,
           board_total_usd: BOARD_PRICE_PER_NIGHT(boardPlan) * nights,
         })
@@ -217,10 +269,20 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
       if (bookingError) throw new Error(bookingError.message)
 
       if (surfboardQty > 0) {
-        await insertEquipment(EQUIPMENT_SURFBOARD, surfboardQty, surfboardStart, surfboardEnd, prices.surfboard, guestId, booking.id)
+        const surfboardDays = rentalDays(surfboardStart, surfboardEnd, Math.max(1, Math.round(
+          (checkOut!.getTime() - checkIn!.getTime()) / (1000 * 60 * 60 * 24)
+        )))
+        const surfboardTotal = surfboardTotalForDays(surfboardDays, prices[EQUIPMENT_SURFBOARD], SURFBOARD_TIERS) * surfboardQty
+        await insertEquipment(EQUIPMENT_SURFBOARD, surfboardQty, surfboardStart, surfboardEnd, prices[EQUIPMENT_SURFBOARD], guestId, booking.id, surfboardTotal)
       }
       if (bicycleQty > 0) {
-        await insertEquipment(EQUIPMENT_BICYCLE, bicycleQty, bicycleStart, bicycleEnd, prices.bicycle, guestId, booking.id)
+        await insertEquipment(EQUIPMENT_BICYCLE, bicycleQty, bicycleStart, bicycleEnd, prices[EQUIPMENT_BICYCLE], guestId, booking.id)
+      }
+      if (motorbikeModel) {
+        await insertEquipment(motorbikeModel, motorbikeQty, motorbikeStart, motorbikeEnd, prices[motorbikeModel], guestId, booking.id)
+      }
+      if (carModel) {
+        await insertEquipment(carModel, carQty, carStart, carEnd, prices[carModel], guestId, booking.id)
       }
 
       toast.success("Booking created")
@@ -358,7 +420,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="text-sm font-medium">Surfboard</p>
-                  <p className="text-xs text-muted-foreground">{prices.surfboard > 0 ? `$${prices.surfboard}/day` : "Loading..."}</p>
+                  <p className="text-xs text-muted-foreground">{prices[EQUIPMENT_SURFBOARD] > 0 ? `$${prices[EQUIPMENT_SURFBOARD]}/day` : "Loading..."}</p>
                 </div>
                 <QtyStepper value={surfboardQty} onChange={setSurfboardQty} />
               </div>
@@ -381,7 +443,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="text-sm font-medium">Bicycle</p>
-                  <p className="text-xs text-muted-foreground">{prices.bicycle > 0 ? `$${prices.bicycle}/day` : "Loading..."}</p>
+                  <p className="text-xs text-muted-foreground">{prices[EQUIPMENT_BICYCLE] > 0 ? `$${prices[EQUIPMENT_BICYCLE]}/day` : "Loading..."}</p>
                 </div>
                 <QtyStepper value={bicycleQty} onChange={setBicycleQty} />
               </div>
@@ -398,6 +460,82 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
                 </div>
               )}
               {fieldErrors.bicycleEnd && <p className="text-sm text-destructive" role="alert">{fieldErrors.bicycleEnd}</p>}
+            </div>
+
+            <div className="rounded-lg border border-input p-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium">Motorbike</p>
+                  <p className="text-xs text-muted-foreground">
+                    {motorbikeModel && prices[motorbikeModel] > 0 ? `$${prices[motorbikeModel]}/day` : "Select a model"}
+                  </p>
+                </div>
+                <QtyStepper value={motorbikeQty} onChange={setMotorbikeQty} max={10} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Model *</Label>
+                <Select value={motorbikeModel} onValueChange={(val) => { setMotorbikeModel(val); setFieldErrors((p) => ({ ...p, motorbikeEnd: "" })) }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOTORBIKE_OPTIONS.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.name} — {prices[m.id] > 0 ? `$${prices[m.id]}` : "..."}/day</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {motorbikeModel && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Start *</Label>
+                    <Input type="date" value={motorbikeStart} onChange={(e) => setMotorbikeStart(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">End *</Label>
+                    <Input type="date" value={motorbikeEnd} onChange={(e) => setMotorbikeEnd(e.target.value)} aria-invalid={!!fieldErrors.motorbikeEnd} />
+                  </div>
+                </div>
+              )}
+              {fieldErrors.motorbikeEnd && <p className="text-sm text-destructive" role="alert">{fieldErrors.motorbikeEnd}</p>}
+            </div>
+
+            <div className="rounded-lg border border-input p-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium">Car</p>
+                  <p className="text-xs text-muted-foreground">
+                    {carModel && prices[carModel] > 0 ? `$${prices[carModel]}/day` : "Select a model"}
+                  </p>
+                </div>
+                <QtyStepper value={carQty} onChange={setCarQty} max={10} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Model *</Label>
+                <Select value={carModel} onValueChange={(val) => { setCarModel(val); setFieldErrors((p) => ({ ...p, carEnd: "" })) }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CAR_OPTIONS.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name} — {prices[c.id] > 0 ? `$${prices[c.id]}` : "..."}/day</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {carModel && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Start *</Label>
+                    <Input type="date" value={carStart} onChange={(e) => setCarStart(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">End *</Label>
+                    <Input type="date" value={carEnd} onChange={(e) => setCarEnd(e.target.value)} aria-invalid={!!fieldErrors.carEnd} />
+                  </div>
+                </div>
+              )}
+              {fieldErrors.carEnd && <p className="text-sm text-destructive" role="alert">{fieldErrors.carEnd}</p>}
             </div>
           </div>
         </div>
@@ -420,7 +558,20 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
               <Input value={guestPhone} onChange={(e) => { setGuestPhone(e.target.value); setFieldErrors((p) => ({ ...p, guestPhone: "" })) }} placeholder="+94 XXX XXX XXX" aria-invalid={!!fieldErrors.guestPhone} />
               {fieldErrors.guestPhone && <p className="text-sm text-destructive" role="alert">{fieldErrors.guestPhone}</p>}
             </div>
+            <div className="space-y-2">
+              <Label>Nationality</Label>
+              <Input value={guestNationality} onChange={(e) => setGuestNationality(e.target.value)} placeholder="e.g. Sri Lankan" />
+            </div>
+            <div className="space-y-2">
+              <Label>NIC / Passport</Label>
+              <Input value={guestNicPassport} onChange={(e) => setGuestNicPassport(e.target.value)} placeholder="NIC or passport number" />
+            </div>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Number of Guests</Label>
+          <Input type="number" min={1} max={20} value={numGuests} onChange={(e) => setNumGuests(Math.max(1, Math.min(20, Number(e.target.value))))} />
         </div>
 
         <div className="space-y-2">
