@@ -173,7 +173,7 @@ export function AdminPanel({
             <TableBody>
               {profiles.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.full_name}</TableCell>
+                  <TableCell className="font-medium">{p.full_name || p.role.charAt(0).toUpperCase() + p.role.slice(1)}</TableCell>
                   <TableCell className="capitalize">{p.role}</TableCell>
                   <TableCell><Badge variant={p.active ? "default" : "secondary"}>{p.active ? "Active" : "Inactive"}</Badge></TableCell>
                   <TableCell>
@@ -379,7 +379,7 @@ export function AdminPanel({
               {units.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.unit_label}</TableCell>
-                  <TableCell>{u.category?.name}</TableCell>
+                  <TableCell>{u.category?.name?.split(' — ')[0] ?? u.category?.name}</TableCell>
                   <TableCell><Badge variant={u.condition_status === "good" ? "default" : "destructive"}>{u.condition_status.replace("_", " ")}</Badge></TableCell>
                   <TableCell>
                     <Button variant="destructive" size="sm" onClick={() => retireUnit(u.id)}><Trash2Icon /></Button>
