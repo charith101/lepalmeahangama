@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache"
 import type { Database } from "@/lib/supabase/database.types"
 import { guestSchema } from "@/lib/validations"
 import { requireStaff } from "@/lib/auth"
+import { equipmentItemPrice, transferPrice, computeBookingTotal } from "@/lib/booking-pricing"
 import { refundPayherePayment } from "@/lib/payhere-refund"
 import { BOARD_PLANS, BOARD_PRICE_PER_NIGHT, type BoardPlan } from "@/lib/constants"
 
@@ -47,8 +48,8 @@ export async function createBooking(data: {
   num_guests?: number
   room_total_usd?: number
   notes?: string
-  equipment?: Array<{ unit_id: string; start_date: string; end_date: string; price_usd?: number }>
-  transfer?: { route_id: string; direction: "arrival" | "departure"; flight_number?: string; transfer_datetime: string; price_usd?: number }
+  equipment?: Array<{ unit_id: string; start_date: string; end_date: string }>
+  transfer?: { route_id: string; direction: "arrival" | "departure"; flight_number?: string; transfer_datetime: string }
   group_booking_id?: string
 }) {
   const supabase = createAdminClient()
@@ -86,13 +87,16 @@ export async function createBooking(data: {
   if (bookingErr) return { error: bookingErr.message }
 
   for (const eq of data.equipment || []) {
+    const nights = Math.max(1, Math.round(
+      (new Date(data.check_out).getTime() - new Date(data.check_in).getTime()) / (1000 * 60 * 60 * 24)
+    ))
     await supabase.from("equipment_bookings").insert({
       unit_id: eq.unit_id,
       guest_id: guestId,
       booking_id: booking.id,
       start_date: eq.start_date,
       end_date: eq.end_date,
-      price_usd: eq.price_usd ?? 0,
+      price_usd: await equipmentItemPrice(eq.unit_id, eq.start_date, eq.end_date, nights),
       status: data.status === "pending_payment" ? "pending" : "active",
     })
   }
@@ -105,7 +109,7 @@ export async function createBooking(data: {
       direction: data.transfer.direction,
       flight_number: data.transfer.flight_number,
       transfer_datetime: data.transfer.transfer_datetime,
-      price_usd: data.transfer.price_usd ?? 0,
+      price_usd: await transferPrice(data.transfer.route_id),
       status: "scheduled",
     })
   }
@@ -119,13 +123,11 @@ export async function createPayHereBooking(data: {
     room_id: string
     check_in: string
     check_out: string
-    room_total_usd?: number
     num_guests?: number
   }>
   board_plan?: string
-  grand_total_usd?: number
-  equipment?: Array<{ unit_id: string; start_date: string; end_date: string; price_usd?: number }>
-  transfer?: { route_id: string; direction: "arrival" | "departure"; flight_number?: string; transfer_datetime: string; price_usd?: number }
+  equipment?: Array<{ unit_id: string; start_date: string; end_date: string }>
+  transfer?: { route_id: string; direction: "arrival" | "departure"; flight_number?: string; transfer_datetime: string }
   }) {
   if (process.env.NEXT_PUBLIC_BOOKING_ENABLED === "false") {
     return { error: "Online booking is temporarily unavailable. Please contact us directly." }
@@ -166,6 +168,7 @@ export async function createPayHereBooking(data: {
 
   const groupBookingId = crypto.randomUUID()
   const bookingIds: string[] = []
+  let bookingNights = 1
 
   for (const sel of data.roomSelections) {
     const roomTotal = await validateAndComputeRoomTotal(sel.room_id, sel.check_in, sel.check_out)
@@ -204,6 +207,7 @@ export async function createPayHereBooking(data: {
       return { error: bookingErr.message }
     }
     bookingIds.push(booking.id)
+    bookingNights = nights
   }
 
   for (const eq of data.equipment || []) {
@@ -213,7 +217,7 @@ export async function createPayHereBooking(data: {
       booking_id: bookingIds[0],
       start_date: eq.start_date,
       end_date: eq.end_date,
-      price_usd: eq.price_usd ?? 0,
+      price_usd: await equipmentItemPrice(eq.unit_id, eq.start_date, eq.end_date, bookingNights),
       status: "pending",
     })
   }
@@ -226,13 +230,26 @@ export async function createPayHereBooking(data: {
       direction: data.transfer.direction,
       flight_number: data.transfer.flight_number,
       transfer_datetime: data.transfer.transfer_datetime,
-      price_usd: data.transfer.price_usd ?? 0,
+      price_usd: await transferPrice(data.transfer.route_id),
       status: "scheduled",
     })
   }
 
+  const totalResult = await computeBookingTotal(groupBookingId)
+  if ("error" in totalResult) {
+    await supabase.from("guests").delete().eq("id", guest.id)
+    return { error: totalResult.error }
+  }
+
   revalidatePath("/dashboard/calendar")
-  return { data: { bookingIds, groupBookingId, grandTotal: data.grand_total_usd ?? 0 } }
+  return {
+    data: {
+      bookingIds,
+      groupBookingId,
+      orderId: `BOOK-${groupBookingId}`,
+      grandTotal: totalResult.total,
+    },
+  }
 }
 
 export async function getBooking(id: string) {
@@ -359,7 +376,6 @@ export type BookingLookupResult = {
   guest_email: string
   guest_phone: string | null
   guest_nationality: string | null
-  guest_nic_or_passport: string | null
   room_number: string
   room_category_name: string
   room_total_usd: number | null
@@ -371,7 +387,7 @@ export type BookingLookupResult = {
 }
 
 export async function lookupBookingByRef(refCode: string, email: string) {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
   const refUpper = refCode.toUpperCase().trim()
 
   const { data, error } = await supabase

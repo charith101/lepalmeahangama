@@ -747,20 +747,16 @@ export type Database = {
           check_in: string
           check_out: string
           created_at: string
-          created_by_staff_id: string
           group_booking_id: string
           guest_email: string
           guest_full_name: string
-          guest_id: string
           guest_nationality: string
-          guest_nic_or_passport: string
           guest_phone: string
           id: string
           notes: string
           num_guests: number
           ota_name: string
           room_category_name: string
-          room_id: string
           room_number: string
           room_total_usd: number
           source: string

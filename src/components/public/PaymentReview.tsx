@@ -52,33 +52,29 @@ export function PaymentReview({
   const [error, setError] = useState("")
 
   async function checkAndBuildData() {
-    const allRooms: Array<{ room_id: string; check_in: string; check_out: string; room_total_usd: number }> = []
+    const allRooms: Array<{ room_id: string; check_in: string; check_out: string }> = []
     for (const sel of roomSelections) {
       const avail = await getAvailableRooms(sel.categoryId, checkIn, checkOut)
       if (avail.error || !avail.data?.length) {
         throw new Error(avail.error || `No rooms available for ${sel.categoryName}`)
       }
-      const roomPricePerNight = Number(sel.basePrice)
       for (let i = 0; i < sel.quantity; i++) {
         allRooms.push({
           room_id: avail.data[i % avail.data.length].id,
           check_in: checkIn,
           check_out: checkOut,
-          room_total_usd: roomPricePerNight * nights,
         })
       }
     }
 
-    const equipment: Array<{ unit_id: string; start_date: string; end_date: string; price_usd: number }> = []
+    const equipment: Array<{ unit_id: string; start_date: string; end_date: string }> = []
     if (extras.surfboardQty > 0) {
       const surfStart = extras.surfboardStart || checkIn
       const surfEnd = extras.surfboardEnd || checkOut
-      const days = rentalDays(surfStart, surfEnd, nights)
       const units = await getAvailableUnits(EQUIPMENT_SURFBOARD, surfStart, surfEnd)
       if (units.data) {
-        const total = surfboardTotalForDays(days, pricing.surfboardPricePerDay, SURFBOARD_TIERS)
         for (let i = 0; i < Math.min(extras.surfboardQty, units.data.length); i++) {
-          equipment.push({ unit_id: units.data[i].id, start_date: surfStart, end_date: surfEnd, price_usd: total })
+          equipment.push({ unit_id: units.data[i].id, start_date: surfStart, end_date: surfEnd })
         }
       }
     }
@@ -91,8 +87,6 @@ export function PaymentReview({
       if (!cat) continue
       const start = it.start || checkIn
       const end = it.end || checkOut
-      const days = rentalDays(start, end, nights)
-      const perUnitTotal = cat.pricePerDay * days
       const units = await getAvailableUnits(it.categoryId, start, end)
       if (units.error) throw new Error(units.error)
       if (!units.data || units.data.length === 0) {
@@ -102,12 +96,12 @@ export function PaymentReview({
       // share the same dates and price; we record one equipment_booking per unit so the
       // dashboard equipment panel can see each one individually.
       for (let i = 0; i < Math.min(it.qty, units.data.length); i++) {
-        equipment.push({ unit_id: units.data[i].id, start_date: start, end_date: end, price_usd: perUnitTotal })
+        equipment.push({ unit_id: units.data[i].id, start_date: start, end_date: end })
       }
     }
 
     const transfer = extras.transferNeeded
-      ? { route_id: ROUTE_CMB, direction: extras.transferDirection as "arrival" | "departure", flight_number: extras.flightNumber || undefined, transfer_datetime: `${checkIn}T${extras.transferTime || "12:00"}:00Z`, price_usd: pricing.transferPrice }
+      ? { route_id: ROUTE_CMB, direction: extras.transferDirection as "arrival" | "departure", flight_number: extras.flightNumber || undefined, transfer_datetime: `${checkIn}T${extras.transferTime || "12:00"}:00Z` }
       : undefined
 
     return { allRooms, equipment, transfer }
@@ -123,20 +117,17 @@ export function PaymentReview({
         guest: { full_name: guest.fullName, email: guest.email || undefined, phone: guest.phone || undefined, nationality: guest.nationality || undefined, nic_or_passport: guest.nic_passport || undefined },
         roomSelections: allRooms,
         board_plan: boardPlan,
-        grand_total_usd: grandTotal,
         equipment: equipment.length > 0 ? equipment : undefined,
         transfer,
       })
       if (result.error) { setError(result.error); setStatus("idle"); return }
-      const { bookingIds, groupBookingId, grandTotal: total } = result.data!
-      const orderId = `BOOK-${groupBookingId.slice(0, 8).toUpperCase()}`
+      const { bookingIds, groupBookingId, orderId, grandTotal } = result.data!
       const currency = "USD"
-      const amount = total.toFixed(2)
 
       const hashRes = await fetch("/api/payhere/hash", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order_id: orderId, amount, currency }),
+        body: JSON.stringify({ order_id: orderId, currency }),
       })
       if (!hashRes.ok) { setError("Failed to initialize payment"); setStatus("idle"); return }
       const { hash, merchant_id } = await hashRes.json()
@@ -156,7 +147,7 @@ export function PaymentReview({
         order_id: orderId,
         items: "Le Palme Ahangama — Room Booking",
         currency,
-        amount,
+        amount: grandTotal.toFixed(2),
         hash,
         first_name: guest.fullName.split(" ")[0] || guest.fullName,
         last_name: guest.fullName.split(" ").slice(1).join(" ") || "Guest",

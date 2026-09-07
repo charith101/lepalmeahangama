@@ -10,7 +10,18 @@ export async function createClient() {
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
-        setAll: () => {},
+        setAll: (cookiesToSet) => {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Called from a Server Component — cookie mutation is only allowed
+            // in Server Actions / Route Handlers. Refreshed tokens are still
+            // persisted there; middleware (src/proxy.ts) handles session
+            // refreshes on plain navigation.
+          }
+        },
       },
     }
   )

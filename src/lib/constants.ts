@@ -41,7 +41,7 @@ export const BOARD_PRICE_PER_NIGHT = (plan: string): number =>
 // Falls back to the legacy single-rate column when tiered_pricing is null.
 // Tier shape: { min_days, max_days (nullable for "and up"), price_per_day_usd }
 type Tier = { min_days: number; max_days: number | null; price_per_day_usd: number }
-type TieredPricing = { tiers: Tier[] }
+export type TieredPricing = { tiers: Tier[] }
 
 export function surfboardTotalForDays(days: number, fallbackPerDay: number, tiered?: TieredPricing | null): number {
   if (days <= 0) return 0

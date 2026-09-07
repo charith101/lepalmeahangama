@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { verifyNotification } from "@/lib/payhere"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { computeBookingTotal } from "@/lib/booking-pricing"
 import { sendBookingConfirmation } from "@/lib/email"
 
 export async function POST(request: NextRequest) {
@@ -27,69 +28,70 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "ok" })
     }
 
+    if (payhere_currency.toUpperCase() !== "USD") {
+      return NextResponse.json({ status: "error", message: "Currency mismatch" }, { status: 400 })
+    }
+
     const supabase = createAdminClient()
-    const groupBookingId = custom_1
-    const bookingId = custom_2
 
-    if (groupBookingId) {
-      const { data: bookings } = await supabase
-        .from("bookings")
-        .update({ status: "confirmed" })
-        .eq("group_booking_id", groupBookingId)
-        .eq("status", "pending_payment")
-        .select("id")
-
-      if (bookings?.length) {
-        await supabase.from("payments").upsert(
-          {
-            booking_id: bookings[0].id,
-            amount_usd: Number(payhere_amount),
-            method: "card_payhere",
-            status: "completed",
-            paid_at: new Date().toISOString(),
-            payhere_payment_id: payment_id,
-          },
-          { onConflict: "booking_id", ignoreDuplicates: true },
-        )
-
-        await supabase
-          .from("equipment_bookings")
-          .update({ status: "active" })
-          .eq("booking_id", bookings[0].id)
-          .eq("status", "pending")
-
-        await sendBookingConfirmation(bookings[0].id)
-      }
-    } else if (bookingId) {
+    // Resolve the booking group this payment is for.
+    let groupBookingId = custom_1
+    if (!groupBookingId) {
       const { data: booking } = await supabase
         .from("bookings")
-        .update({ status: "confirmed" })
-        .eq("id", bookingId)
-        .eq("status", "pending_payment")
-        .select("id")
+        .select("group_booking_id")
+        .eq("id", custom_2)
         .single()
-
-      if (booking) {
-        await supabase.from("payments").upsert(
-          {
-            booking_id: booking.id,
-            amount_usd: Number(payhere_amount),
-            method: "card_payhere",
-            status: "completed",
-            paid_at: new Date().toISOString(),
-            payhere_payment_id: payment_id,
-          },
-          { onConflict: "booking_id", ignoreDuplicates: true },
-        )
-
-        await supabase
-          .from("equipment_bookings")
-          .update({ status: "active" })
-          .eq("booking_id", booking.id)
-          .eq("status", "pending")
-
-        await sendBookingConfirmation(booking.id)
+      if (!booking?.group_booking_id) {
+        return NextResponse.json({ status: "error", message: "Booking not found" }, { status: 404 })
       }
+      groupBookingId = booking.group_booking_id
+    }
+    if (!groupBookingId) {
+      return NextResponse.json({ status: "error", message: "Missing order reference" }, { status: 400 })
+    }
+
+    // Reconcile the paid amount against the expected server-computed total.
+    // A signature only proves PayHere signed *that* amount — not that the
+    // amount is correct. Any mismatch means underpayment: reject and do NOT
+    // confirm the booking.
+    const totalResult = await computeBookingTotal(groupBookingId)
+    if ("error" in totalResult) {
+      return NextResponse.json({ status: "error", message: totalResult.error }, { status: 500 })
+    }
+    const expected = totalResult.total.toFixed(2)
+    const paid = Number(payhere_amount).toFixed(2)
+    if (paid !== expected) {
+      return NextResponse.json({ status: "error", message: "Amount mismatch" }, { status: 400 })
+    }
+
+    const { data: bookings } = await supabase
+      .from("bookings")
+      .update({ status: "confirmed" })
+      .eq("group_booking_id", groupBookingId)
+      .eq("status", "pending_payment")
+      .select("id")
+
+    if (bookings?.length) {
+      await supabase.from("payments").upsert(
+        {
+          booking_id: bookings[0].id,
+          amount_usd: Number(payhere_amount),
+          method: "card_payhere",
+          status: "completed",
+          paid_at: new Date().toISOString(),
+          payhere_payment_id: payment_id,
+        },
+        { onConflict: "booking_id", ignoreDuplicates: true },
+      )
+
+      await supabase
+        .from("equipment_bookings")
+        .update({ status: "active" })
+        .eq("booking_id", bookings[0].id)
+        .eq("status", "pending")
+
+      await sendBookingConfirmation(bookings[0].id)
     }
 
     return NextResponse.json({ status: "ok" })
