@@ -1,5 +1,30 @@
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
+export const HOTEL_NAME = "Le Palme Ahangama"
+export const HOTEL_PHONE_DISPLAY = "0769617372"
+export const HOTEL_PHONE_TEL = "+94769617372"
+export const HOTEL_EMAIL = "info@lepalmeahangama.com"
+
+export const HOTEL_ADDRESS_STREET = "Ruwan Villa, Kahawathugoda"
+export const HOTEL_ADDRESS_LOCALITY = "Ahangama"
+export const HOTEL_ADDRESS_REGION = "Southern Province"
+export const HOTEL_ADDRESS_COUNTRY = "Sri Lanka"
+export const HOTEL_ADDRESS_FULL = `${HOTEL_ADDRESS_STREET}, ${HOTEL_ADDRESS_LOCALITY}, ${HOTEL_ADDRESS_COUNTRY}`
+
+export const HOTEL_LATITUDE = 5.978959218567139
+export const HOTEL_LONGITUDE = 80.36230480227772
+
+export const HOTEL_DESCRIPTION =
+  "Le Palme Ahangama offers family rooms with private bathrooms, balconies, and garden views, plus air-conditioning, a work desk, and free WiFi. Relax on the sun terrace or in the garden, enjoy the lounge, outdoor fireplace, and children's playground, and choose from a shared kitchen, coffee shop, and outdoor seating area. Start each morning with a full English or Irish breakfast with vegetarian and Asian options, plus local specialties, warm dishes, fresh pastries, and fruits."
+
+export const HOTEL_SHORT_DESCRIPTION =
+  "A charming boutique property in Ahangama, Sri Lanka — comfortable rooms, lush gardens, sun terrace, and a friendly host near Kabalana Beach."
+
+export const HOTEL_MAP_EMBED_URL =
+  `https://www.google.com/maps?q=${HOTEL_LATITUDE},${HOTEL_LONGITUDE}&hl=en&z=15&output=embed`
+export const HOTEL_MAP_LINK =
+  `https://www.google.com/maps?q=${HOTEL_LATITUDE},${HOTEL_LONGITUDE}`
+
 export const CATEGORY_DELUXE = "51d3cabe-51d3-49aa-a0ac-80c4d7c22f27"
 export const CATEGORY_BUDGET = "a9dde668-cc67-483b-ad82-bb38e4e266b9"
 export const ROUTE_CMB = "4f4afe58-cd2d-4c92-a55e-4bfa33c32c7e"

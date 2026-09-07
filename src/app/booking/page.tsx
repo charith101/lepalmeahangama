@@ -4,7 +4,7 @@ import { BookingWizard } from "@/components/public/BookingWizard"
 
 export const metadata: Metadata = {
   title: "Check Availability & Book",
-  description: "Select dates, choose your room, add extras, and book your stay at Le Palme Ahangama beachfront hotel.",
+  description: "Select dates, choose your room, add extras, and book your stay at Le Palme Ahangama — a boutique hotel near Kabalana Beach.",
   robots: { index: false, follow: true },
 }
 

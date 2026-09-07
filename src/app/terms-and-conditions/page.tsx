@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Terms and Conditions",
-  description: "Read the terms and conditions for bookings at Le Palme Ahangama, a beachfront hotel in Ahangama, Sri Lanka.",
+  description: "Read the terms and conditions for bookings at Le Palme Ahangama, a boutique hotel in Ahangama, Sri Lanka.",
 }
 
 export default function TermsAndConditionsPage() {

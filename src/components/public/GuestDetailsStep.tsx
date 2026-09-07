@@ -72,7 +72,7 @@ export function GuestDetailsStep({ onNext, onBack, initialData }: GuestDetailsSt
             <label htmlFor="phone" className="text-sm font-sans font-medium text-stone-900 dark:text-stone-100">Phone</label>
             <input
               id="phone"
-              placeholder="+94-XXX-XXXXXX"
+              placeholder="e.g. +94769617372"
               className="w-full mt-1 h-9 border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-2 text-sm font-sans text-stone-900 dark:text-stone-100 outline-none"
               {...register("phone")}
               aria-invalid={!!errors.phone}

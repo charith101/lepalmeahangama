@@ -3,7 +3,7 @@ import Link from "next/link"
 
 export const metadata: Metadata = {
   title: "Dining",
-  description: "Experience the vibrant flavors of Sri Lankan cuisine at Le Palme Ahangama.",
+  description: "Start the morning with a full English or Irish breakfast — vegetarian and Asian options, local specialties, fresh pastries, and fruits — at Le Palme Ahangama.",
 }
 
 export default function DinePage() {
@@ -20,16 +20,19 @@ export default function DinePage() {
                 A Taste of Sri Lanka
               </h1>
               <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed mb-6">
-                Our restaurant celebrates the vibrant flavors of Sri Lankan cuisine,
-                from freshly caught seafood to fragrant curries and tropical fruits.
-                Dine overlooking the ocean as the sun paints the sky in shades of
-                amber and rose.
+                Every morning at Le Palme begins with a generous breakfast
+                spread — a full English or Irish breakfast alongside
+                vegetarian and Asian options, local specialties, warm dishes,
+                fresh pastries, and tropical fruits. Pull up a chair in the
+                outdoor seating area, in the garden, or in our coffee shop,
+                and let the day start slowly.
               </p>
               <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed mb-8">
-                Every dish is prepared with locally sourced ingredients, honoring
-                traditional recipes while embracing modern techniques. Our chef
-                crafts menus that change with the seasons, ensuring the freshest
-                possible experience.
+                When the sun dips, our chef turns to the island&apos;s best
+                local produce — freshly caught seafood, fragrant curries, and
+                seasonal ingredients — for relaxed dinners in the garden. With
+                a shared kitchen on hand, you&apos;re welcome to put together
+                your own simple meal whenever the mood strikes.
               </p>
               <Link
                 href="/booking"

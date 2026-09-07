@@ -31,6 +31,12 @@ const experiences = [
     description:
       "Dive into Sri Lanka's rich cultural heritage with visits to the historic Galle Fort, tea plantations in the hill country, and traditional cooking classes. Our concierge curates each experience to give you a meaningful connection to the island's traditions.",
   },
+  {
+    title: "Skate Paths",
+    image: "https://images.unsplash.com/photo-1547447134-cd3f5c65ffc0?q=80&w=1000&auto=format&fit=crop",
+    description:
+      "Roll through Ahangama's smoothest coastal lanes and palm-shaded village paths on our guided skate tours. From relaxed rides along the shoreline near Kabalana Beach to longer routes winding through rice paddies and sleepy fishing villages, our team sets you up with boards, helmets, and the best local lines for every level. It's the most playful way to slow down, take in the southern coast, and feel the rhythm of daily life on four wheels.",
+  },
 ]
 
 export default function ExperiencesPage() {

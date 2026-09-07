@@ -27,9 +27,9 @@ export function HotelIntroSection() {
           Le Palme Ahangama
         </h2>
         <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed max-w-2xl mx-auto mb-8">
-          A boutique beachfront property where every detail is considered.
-          From sun-drenched days by the ocean to intimate evenings under the
-          stars — your Sri Lankan escape begins here.
+          A charming boutique property in the serene coastal town of Ahangama,
+          where lush gardens, a sun terrace, and warm Sri Lankan hospitality
+          come together for a peaceful stay near Kabalana Beach.
         </p>
         <Link
           href="/contact"

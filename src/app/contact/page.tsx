@@ -4,6 +4,14 @@ import { useState } from "react"
 import { Mail, Phone, MapPin } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import {
+  HOTEL_ADDRESS_FULL,
+  HOTEL_EMAIL,
+  HOTEL_MAP_EMBED_URL,
+  HOTEL_MAP_LINK,
+  HOTEL_PHONE_DISPLAY,
+  HOTEL_PHONE_TEL,
+} from "@/lib/constants"
 
 export default function ContactPage() {
   const supabase = createClient()
@@ -79,9 +87,14 @@ export default function ContactPage() {
                   <div>
                     <h3 className="text-sm font-sans font-medium text-stone-900 dark:text-stone-100 mb-1">Address</h3>
                     <p className="text-sm font-sans text-stone-500 dark:text-stone-400 leading-relaxed">
-                      Ahangama Beach Road<br />
-                      Ahangama, Southern Province<br />
-                      Sri Lanka
+                      <a
+                        href={HOTEL_MAP_LINK}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-stone-900 dark:hover:text-stone-100 transition-colors underline-offset-4 hover:underline"
+                      >
+                        {HOTEL_ADDRESS_FULL}
+                      </a>
                     </p>
                   </div>
                 </div>
@@ -91,8 +104,11 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-sans font-medium text-stone-900 dark:text-stone-100 mb-1">Phone</h3>
-                    <a href="tel:+94-XXX-XXXXXX" className="text-sm font-sans text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors">
-                      +94-XXX-XXXXXX
+                    <a
+                      href={`tel:${HOTEL_PHONE_TEL}`}
+                      className="text-sm font-sans text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors"
+                    >
+                      {HOTEL_PHONE_DISPLAY}
                     </a>
                   </div>
                 </div>
@@ -102,8 +118,11 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-sans font-medium text-stone-900 dark:text-stone-100 mb-1">Email</h3>
-                    <a href="mailto:info@lepalmeahangama.com" className="text-sm font-sans text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors">
-                      info@lepalmeahangama.com
+                    <a
+                      href={`mailto:${HOTEL_EMAIL}`}
+                      className="text-sm font-sans text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors"
+                    >
+                      {HOTEL_EMAIL}
                     </a>
                   </div>
                 </div>
@@ -163,6 +182,26 @@ export default function ContactPage() {
                 </button>
               </form>
             </div>
+          </div>
+        </div>
+
+        <div className="max-w-6xl mx-auto mt-20">
+          <p className="text-xs font-sans font-medium tracking-[0.25em] uppercase text-stone-400 dark:text-stone-500 mb-3">
+            Find Us
+          </p>
+          <h2 className="text-xl font-serif font-normal text-stone-900 dark:text-stone-100 mb-6">
+            Our Location
+          </h2>
+          <div className="relative w-full aspect-[16/9] overflow-hidden border border-stone-200 dark:border-stone-800">
+            <iframe
+              title="Le Palme Ahangama location map"
+              src={HOTEL_MAP_EMBED_URL}
+              className="absolute inset-0 w-full h-full"
+              style={{ border: 0 }}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            />
           </div>
         </div>
       </section>

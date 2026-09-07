@@ -1,9 +1,16 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import {
+  HOTEL_ADDRESS_FULL,
+  HOTEL_DESCRIPTION,
+  HOTEL_MAP_EMBED_URL,
+  HOTEL_MAP_LINK,
+  HOTEL_NAME,
+} from "@/lib/constants"
 
 export const metadata: Metadata = {
   title: "About Us",
-  description: "Learn about Le Palme Ahangama — a boutique beachfront hotel in Ahangama, Sri Lanka.",
+  description: `${HOTEL_NAME} — a charming boutique property in Ahangama, Sri Lanka. Family rooms with garden views, sun terrace, and a friendly host near Kabalana Beach.`,
 }
 
 export default function AboutPage() {
@@ -17,20 +24,31 @@ export default function AboutPage() {
                 About
               </p>
               <h1 className="text-[clamp(2rem,4vw,3.5rem)] font-serif font-normal leading-[1.1] text-stone-900 dark:text-stone-100 mb-6">
-                Le Palme Ahangama
+                {HOTEL_NAME}
               </h1>
               <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed mb-6">
-                Nestled along the pristine shores of Ahangama on Sri Lanka&apos;s
-                southern coast, Le Palme is an intimate beachfront escape where
-                thoughtful design meets warm hospitality.
+                {HOTEL_NAME} is a charming boutique property located in the
+                serene coastal town of Ahangama, Sri Lanka. Known for its
+                tranquil atmosphere, this accommodation offers a unique blend of
+                modern comfort and traditional Sri Lankan hospitality.
+                Surrounded by lush gardens and just a short drive from the
+                beach, guests can enjoy a peaceful retreat.
+              </p>
+              <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed mb-6">
+                The property features well-appointed family rooms with private
+                bathrooms, balconies, and garden views. Each room is equipped
+                with air-conditioning, a work desk, and free WiFi — so you can
+                work, rest, or simply unwind. Our sun terrace, garden, shared
+                lounge, outdoor fireplace, and children&apos;s playground give
+                you plenty of space to relax, while the shared kitchen, coffee
+                shop, and outdoor seating area make every meal feel easy.
               </p>
               <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed mb-8">
-                Our story began with a simple belief: that the most memorable
-                travel experiences are found in the spaces between — between the
-                waves and the shore, between tradition and modernity, between
-                adventure and stillness. Every detail at Le Palme, from the
-                handpicked furnishings to the curated local experiences, is
-                designed to create that sense of effortless calm.
+                With a focus on wellness and genuine hospitality, Le Palme
+                caters to both leisure travelers and those in search of
+                adventure. Whether you&apos;re here for the surf, the
+                countryside, or simply the calm of the southern coast, our
+                friendly host is on hand to make your stay memorable.
               </p>
               <Link
                 href="/contact"
@@ -42,7 +60,7 @@ export default function AboutPage() {
             <div className="relative aspect-4/3 overflow-hidden bg-stone-200 dark:bg-stone-800">
               <img
                 src="/images/IMG-1.jpeg"
-                alt="Beachfront view at Le Palme Ahangama"
+                alt={`${HOTEL_NAME} — garden and rooms in Ahangama`}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -59,7 +77,7 @@ export default function AboutPage() {
             <div className="relative aspect-4/5 overflow-hidden bg-stone-200 dark:bg-stone-800 mt-8">
               <img
                 src="/images/IMG-3.jpeg"
-                alt="Ocean view from Le Palme"
+                alt="Garden view from Le Palme"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -72,30 +90,66 @@ export default function AboutPage() {
             </div>
           </div>
 
-          <div className="max-w-3xl">
+          <div className="max-w-3xl mb-20">
             <h2 className="text-xl font-serif font-normal text-stone-900 dark:text-stone-100 mb-6">
-              Our Philosophy
+              What Our Guests Love
             </h2>
             <div className="space-y-4 text-stone-600 dark:text-stone-400 text-sm font-sans leading-relaxed">
               <p>
-                We believe that true luxury is found in the details — the way
-                light filters through palm fronds at golden hour, the warmth of
-                a genuinely welcome smile, the taste of a fruit picked at its
-                peak. Our beachfront property is a sanctuary for those seeking
-                to reconnect with what matters.
+                Couples in particular like the location — they rate it
+                <strong className="text-stone-900 dark:text-stone-100"> 8.6 </strong>
+                for a two-person trip. Conveniently situated in Ahangama, our
+                property puts you close to attractions and interesting dining
+                options. This 4.0-star property is packed with in-house
+                facilities to improve the quality and joy of your stay.
               </p>
               <p>
-                Sustainability is at the heart of what we do. We work with local
-                farmers, fishermen, and artisans to bring the best of Sri Lanka
-                to your table. Our rooms are designed to maximize natural
-                ventilation and light, reducing our environmental footprint
-                while enhancing your comfort.
+                We&apos;re located just 1.4 miles from Kabalana Beach and 5 miles
+                from Koggala Airport, giving you easy access to the best of the
+                south coast. Guests appreciate the quietness of the area and the
+                warm, friendly host — many return year after year.
               </p>
               <p>
-                Whether you&apos;re here to ride the perfect wave, explore ancient
-                temples, or simply read a book by the ocean, we invite you to
-                make Le Palme your home on this beautiful island.
+                Every morning starts with a full English or Irish breakfast,
+                served with vegetarian and Asian options. Local specialties,
+                warm dishes, fresh pastries, and fruits round out the table, so
+                you can fuel up for a day of surfing, exploring, or simply doing
+                nothing at all.
               </p>
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+              <div>
+                <p className="text-xs font-sans font-medium tracking-[0.25em] uppercase text-stone-400 dark:text-stone-500 mb-3">
+                  Find Us
+                </p>
+                <h2 className="text-xl font-serif font-normal text-stone-900 dark:text-stone-100">
+                  Our Location
+                </h2>
+                <p className="text-stone-600 dark:text-stone-400 text-sm font-sans leading-relaxed mt-2 max-w-xl">
+                  <a
+                    href={HOTEL_MAP_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-4 hover:text-stone-900 dark:hover:text-stone-100 transition-colors"
+                  >
+                    {HOTEL_ADDRESS_FULL}
+                  </a>
+                </p>
+              </div>
+            </div>
+            <div className="relative w-full aspect-[16/9] overflow-hidden border border-stone-200 dark:border-stone-800">
+              <iframe
+                title={`${HOTEL_NAME} location map`}
+                src={HOTEL_MAP_EMBED_URL}
+                className="absolute inset-0 w-full h-full"
+                style={{ border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
             </div>
           </div>
         </div>

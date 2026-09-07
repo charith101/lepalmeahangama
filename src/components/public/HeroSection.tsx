@@ -68,7 +68,8 @@ export function HeroSection() {
         
 
         <p className={`max-w-md text-white/80 text-sm sm:text-base font-sans leading-relaxed -mb-6 transition-all duration-1000 delay-300 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-          A beachfront retreat where the reef break meets your doorstep.
+          A charming boutique retreat with lush gardens, a sun terrace, and a
+          friendly host — just 1.4 miles from Kabalana Beach.
         </p>
       </div>
 

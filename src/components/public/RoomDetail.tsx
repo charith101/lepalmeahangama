@@ -65,7 +65,7 @@ export function RoomDetail({ id, name, base_price_usd, max_occupancy, descriptio
               </ul>
             ) : (
               <p className="text-sm font-sans leading-relaxed text-stone-600 dark:text-stone-400 max-w-prose">
-                {description || `Our ${name.toLowerCase()} room offers comfortable accommodation with modern amenities.`}
+                {description || `Our ${name.toLowerCase()} room offers comfortable accommodation with air-conditioning, a private bathroom, and free WiFi.`}
               </p>
             )}
           </div>

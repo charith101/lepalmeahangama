@@ -1,7 +1,7 @@
 import { Resend } from "resend"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { formatCurrency } from "@/lib/utils"
-import { BOARD_LABEL } from "@/lib/constants"
+import { BOARD_LABEL, HOTEL_ADDRESS_FULL, HOTEL_NAME, HOTEL_PHONE_DISPLAY, HOTEL_EMAIL } from "@/lib/constants"
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
@@ -57,7 +57,7 @@ export async function sendBookingConfirmation(bookingId: string) {
   <tr><td style="padding:8px 0;color:#666">Total</td><td style="padding:8px 0;font-weight:500">${formatCurrency(Number(booking.room_total_usd ?? 0) + Number(booking.board_total_usd ?? 0))}</td></tr>
   </table>
   <a href="${process.env.NEXT_PUBLIC_APP_URL ?? ""}" style="display:inline-block;margin-top:24px;padding:10px 24px;background:#111;color:#fff;text-decoration:none;border-radius:999px;font-size:14px">Visit our website</a>
-  <p style="margin-top:32px;color:#999;font-size:12px">Le Palme Ahangama — Ahangama, Sri Lanka</p>
+  <p style="margin-top:32px;color:#999;font-size:12px">${HOTEL_NAME} — ${HOTEL_ADDRESS_FULL} · ${HOTEL_PHONE_DISPLAY} · <a href="mailto:${HOTEL_EMAIL}" style="color:#999">${HOTEL_EMAIL}</a></p>
   </div>`,
     })
     console.log("[email] Confirmation sent", { bookingId, to: g.email })

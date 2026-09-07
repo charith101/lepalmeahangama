@@ -8,7 +8,7 @@ import { PublicFooter } from "@/components/public/PublicFooter";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { APP_URL } from "@/lib/constants";
+import { APP_URL, HOTEL_DESCRIPTION, HOTEL_NAME } from "@/lib/constants";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -29,31 +29,43 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Le Palme Ahangama",
-    template: "%s | Le Palme Ahangama",
+    default: HOTEL_NAME,
+    template: `%s | ${HOTEL_NAME}`,
   },
-  description: "Beachfront hotel in Ahangama, Sri Lanka. Deluxe & Budget rooms, surfboard & bike rentals, airport transfers. Book direct for best rates.",
-  keywords: ["hotel", "Ahangama", "Sri Lanka", "beachfront", "surf", "booking"],
-  authors: [{ name: "Le Palme Ahangama" }],
-  creator: "Le Palme Ahangama",
-  publisher: "Le Palme Ahangama",
+  description: HOTEL_DESCRIPTION,
+  keywords: [
+    "hotel",
+    "Ahangama",
+    "Sri Lanka",
+    "boutique hotel",
+    "Kabalana Beach",
+    "family rooms",
+    "garden view",
+    "surfboard rental",
+    "bicycle rental",
+    "airport shuttle",
+    "Ahangama accommodation",
+  ],
+  authors: [{ name: HOTEL_NAME }],
+  creator: HOTEL_NAME,
+  publisher: HOTEL_NAME,
   formatDetection: { telephone: true },
   metadataBase: new URL(APP_URL),
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "/",
-    siteName: "Le Palme Ahangama",
-    title: "Le Palme Ahangama — Beachfront Hotel in Sri Lanka",
-    description: "Beachfront hotel in Ahangama, Sri Lanka. Deluxe & Budget rooms, surfboard & bike rentals, airport transfers.",
+    siteName: HOTEL_NAME,
+    title: `${HOTEL_NAME} — Boutique Hotel near Kabalana Beach, Ahangama`,
+    description: HOTEL_DESCRIPTION,
     images: [
-      { url: "/og-image.jpg", width: 1200, height: 630, alt: "Le Palme Ahangama beachfront view" },
+      { url: "/og-image.jpg", width: 1200, height: 630, alt: `${HOTEL_NAME} — garden and sun terrace in Ahangama` },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Le Palme Ahangama — Beachfront Hotel in Sri Lanka",
-    description: "Beachfront hotel in Ahangama, Sri Lanka. Deluxe & Budget rooms, surfboard & bike rentals, airport transfers.",
+    title: `${HOTEL_NAME} — Boutique Hotel near Kabalana Beach, Ahangama`,
+    description: HOTEL_DESCRIPTION,
     images: ["/og-image.jpg"],
   },
   robots: {

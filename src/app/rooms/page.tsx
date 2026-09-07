@@ -4,10 +4,10 @@ import { RoomCategoryCard } from "@/components/public/RoomCategoryCard"
 
 export const metadata: Metadata = {
   title: "Rooms & Rates",
-  description: "Choose from Deluxe beachfront rooms or Budget garden-view rooms. Surfboard & bike rentals, airport transfer available.",
+  description: "Family rooms at Le Palme Ahangama with private bathrooms, balconies, and garden views — plus air-conditioning, a work desk, and free WiFi.",
   openGraph: {
     title: "Rooms & Rates — Le Palme Ahangama",
-    description: "Choose from Deluxe beachfront rooms or Budget garden-view rooms.",
+    description: "Family rooms with private bathrooms, balconies, garden views, air-conditioning, and free WiFi.",
   },
 }
 
@@ -26,7 +26,9 @@ export default async function RoomsPage() {
             Rooms & Rates
           </h1>
           <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans max-w-md mx-auto">
-            Choose from our Deluxe beachfront or Budget garden-view rooms
+            Comfortable family rooms with private bathrooms, balconies, and
+            garden views — air-conditioning, a work desk, and free WiFi in
+            every room.
           </p>
         </div>
       </section>

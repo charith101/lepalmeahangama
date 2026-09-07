@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Refund Policy",
-  description: "Read the cancellation and refund policy for bookings at Le Palme Ahangama, a beachfront hotel in Ahangama, Sri Lanka.",
+  description: "Read the cancellation and refund policy for bookings at Le Palme Ahangama, a boutique hotel in Ahangama, Sri Lanka.",
 }
 
 export default function RefundPolicyPage() {

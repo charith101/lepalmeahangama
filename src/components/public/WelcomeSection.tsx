@@ -11,17 +11,19 @@ export function WelcomeSection() {
               Welcome to Le Palme
             </p>
             <h2 className="text-[clamp(1.8rem,4vw,3rem)] font-serif font-normal leading-[1.15] text-stone-900 dark:text-stone-100">
-              A tranquil sanctuary where the Indian Ocean meets golden shores
+              A charming boutique retreat tucked into the lush gardens of Ahangama
             </h2>
           </div>
         </AnimatedSection>
         <AnimatedSection delay={150}>
           <div className="flex flex-col justify-end">
             <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed mb-6">
-              Nestled along the pristine coastline of Ahangama, Le Palme offers an
-              intimate escape from the everyday. Thoughtfully designed spaces,
-              warm Sri Lankan hospitality, and the gentle rhythm of the ocean
-              create an atmosphere of effortless calm.
+              Just 1.4 miles from Kabalana Beach and 5 miles from Koggala
+              Airport, Le Palme Ahangama offers comfortable family rooms with
+              private bathrooms, balconies, and garden views. Soak up the sun on
+              our terrace, gather in the garden or shared lounge, gather around
+              the outdoor fireplace in the evening, and let the friendly host
+              take care of the rest.
             </p>
             <Link
               href="/about"

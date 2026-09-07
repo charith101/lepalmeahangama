@@ -1,12 +1,14 @@
-import { Wifi, Waves, Bike, Car, UtensilsCrossed, Sunset } from "lucide-react"
+import { Wifi, Sun, TreePine, Coffee, Flame, UtensilsCrossed, Bike, Plane } from "lucide-react"
 
 const amenities = [
-  { icon: Waves, label: "Beachfront Access" },
+  { icon: Sun, label: "Sun Terrace" },
+  { icon: TreePine, label: "Garden" },
   { icon: Wifi, label: "Free WiFi" },
-  { icon: UtensilsCrossed, label: "Restaurant & Bar" },
-  { icon: Sunset, label: "Sunset Terrace" },
+  { icon: UtensilsCrossed, label: "Shared Kitchen" },
+  { icon: Coffee, label: "Coffee Shop" },
+  { icon: Flame, label: "Outdoor Fireplace" },
   { icon: Bike, label: "Bicycle Rental" },
-  { icon: Car, label: "Airport Transfers" },
+  { icon: Plane, label: "Airport Shuttle" },
 ]
 
 export function AmenitiesSection() {
