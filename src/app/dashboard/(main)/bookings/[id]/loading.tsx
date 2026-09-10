@@ -1,7 +1,17 @@
+import { Skeleton } from "@/components/ui/skeleton"
+
 export default function Loading() {
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-black dark:border-gray-700 dark:border-t-white" />
+    <div className="space-y-6" aria-busy="true" aria-label="Loading booking details">
+      <div className="flex flex-wrap items-center gap-2">
+        <Skeleton className="h-10 w-36" />
+        <Skeleton className="h-10 w-36" />
+        <Skeleton className="h-10 w-36" />
+        <Skeleton className="h-10 w-36" />
+      </div>
+      <Skeleton className="h-40" />
+      <Skeleton className="h-40" />
+      <Skeleton className="h-48" />
     </div>
-  );
+  )
 }

@@ -10,19 +10,19 @@ export default async function GuestDetailPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: guest } = await supabase
-    .from("guests")
-    .select("*")
-    .eq("id", id)
-    .single()
+  const [guestRes, bookingsRes] = await Promise.all([
+    supabase.from("guests").select("*").eq("id", id).single(),
+    supabase
+      .from("bookings")
+      .select("*, rooms(room_number, room_categories(name))")
+      .eq("guest_id", id)
+      .order("check_in", { ascending: false }),
+  ])
 
+  const { data: guest } = guestRes
   if (!guest) notFound()
 
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select("*, rooms(room_number, room_categories(name))")
-    .eq("guest_id", id)
-    .order("check_in", { ascending: false })
+  const { data: bookings } = bookingsRes
 
   const bookingIds = (bookings ?? []).map((b) => b.id)
   let paymentsData: { amount_usd: number | null; status: string }[] = []

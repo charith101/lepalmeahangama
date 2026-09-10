@@ -12,10 +12,11 @@ export default async function CalendarPage() {
   const todayStr = today.toISOString().split("T")[0]
   const endStr = endDate.toISOString().split("T")[0]
 
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select(
-      `id,
+  const [{ data: bookings }, { data: rooms }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select(
+        `id,
       check_in,
       check_out,
       status,
@@ -26,21 +27,21 @@ export default async function CalendarPage() {
         category_id,
         room_categories!inner (name)
       )`,
-    )
-    .lte("check_in", endStr)
-    .gte("check_out", todayStr)
-    .in("status", ["pending_payment", "confirmed", "checked_in", "maintenance_block"])
-
-  const { data: rooms } = await supabase
-    .from("rooms")
-    .select(
-      `id,
+      )
+      .lte("check_in", endStr)
+      .gte("check_out", todayStr)
+      .in("status", ["pending_payment", "confirmed", "checked_in", "maintenance_block"]),
+    supabase
+      .from("rooms")
+      .select(
+        `id,
       room_number,
       category_id,
       room_categories!inner (name)`,
-    )
-    .eq("operational_status", "active")
-    .order("room_number")
+      )
+      .eq("operational_status", "active")
+      .order("room_number"),
+  ])
 
   return <CalendarGrid bookings={bookings ?? []} rooms={rooms ?? []} startDate={todayStr} />
 }

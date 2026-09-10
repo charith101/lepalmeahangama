@@ -1,7 +1,19 @@
+import { Skeleton } from "@/components/ui/skeleton"
+
 export default function Loading() {
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-black dark:border-gray-700 dark:border-t-white" />
+    <div className="space-y-6" aria-busy="true" aria-label="Loading transfers">
+      <Skeleton className="h-8 w-56" />
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-28" />
+        </div>
+      </div>
     </div>
-  );
+  )
 }

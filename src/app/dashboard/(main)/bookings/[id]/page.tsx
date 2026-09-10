@@ -6,12 +6,16 @@ export default async function BookingDetailPage(props: { params: Promise<{ id: s
   const { id } = await props.params
   const supabase = await createClient()
 
-  const { data: row } = await supabase
-    .from("bookings")
-    .select("*, guests(*), rooms!inner(*, room_categories!inner(*)), booking_charges(*), invoices(*), payments(*)")
-    .eq("id", id)
-    .single()
+  const [rowRes, settingsRes] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("*, guests(*), rooms!inner(*, room_categories!inner(*)), booking_charges(*), invoices(*), payments(*)")
+      .eq("id", id)
+      .single(),
+    supabase.from("settings").select("min_deposit_pct").eq("id", true).single(),
+  ])
 
+  const { data: row } = rowRes
   if (!row) notFound()
 
   const booking = {
@@ -20,11 +24,7 @@ export default async function BookingDetailPage(props: { params: Promise<{ id: s
     payments: row.payments ? [row.payments] : [],
   }
 
-  const { data: settings } = await supabase
-    .from("settings")
-    .select("min_deposit_pct")
-    .eq("id", true)
-    .single()
+  const { data: settings } = settingsRes
 
   return <BookingDetail booking={booking} minDepositPct={Number(settings?.min_deposit_pct ?? 50)} />
 }
