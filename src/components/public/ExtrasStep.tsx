@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Car, CalendarIcon, Icon, Motorbike, Plane } from "lucide-react"
 import { surfboard } from "@lucide/lab"
 import { format } from "date-fns"
@@ -159,6 +159,11 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, o
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
+  const onChangeRef = useRef(onChange)
+  useEffect(() => {
+    onChangeRef.current = onChange
+  })
+
   // Build items array and fire onChange for real-time price updates
   const buildExtrasData = useCallback((): ExtrasData => {
     const items: ExtrasItem[] = []
@@ -186,8 +191,8 @@ export function ExtrasStep({ defaultCheckIn, defaultCheckOut, nights, pricing, o
   ])
 
   useEffect(() => {
-    onChange?.(buildExtrasData())
-  }, [buildExtrasData, onChange])
+    onChangeRef.current?.(buildExtrasData())
+  }, [buildExtrasData])
 
   // --- Price calculations ---
   const surfboardDays = rentalDays(surfboardStart, surfboardEnd, nights)

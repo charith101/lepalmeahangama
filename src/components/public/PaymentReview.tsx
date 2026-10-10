@@ -194,7 +194,7 @@ export function PaymentReview({
           <div key={sel.categoryId} className="border border-stone-200 dark:border-stone-800 p-3 text-sm font-sans">
             <div className="flex justify-between">
               <span className="font-medium text-stone-900 dark:text-stone-100">{sel.categoryName}</span>
-              <span className="text-stone-900 dark:text-stone-100">{formatCurrency(Number(sel.basePrice) * nights)}</span>
+              <span className="text-stone-900 dark:text-stone-100">{formatCurrency(Number(sel.basePrice) * nights * sel.quantity)}</span>
             </div>
             <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
               {sel.quantity} room{sel.quantity > 1 ? "s" : ""} &times; {nights} nights &middot; Up to {sel.maxOccupancy} guests each
