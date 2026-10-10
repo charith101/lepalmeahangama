@@ -69,8 +69,8 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
   const [paymentMethod, setPaymentMethod] = useState<string | null>("cash")
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [charges, setCharges] = useState(booking.booking_charges)
-  const [payments] = useState(booking.payments)
-  const [invoices] = useState(booking.invoices)
+  const payments = booking.payments
+  const invoices = booking.invoices
   const [showDepositDialog, setShowDepositDialog] = useState(false)
   const [depositAmount, setDepositAmount] = useState("")
   const [showMoveRoomDialog, setShowMoveRoomDialog] = useState(false)
@@ -434,7 +434,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
                 {charges.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>{c.description}</TableCell>
-                    <TableCell className="capitalize">{c.category.replace("_", " ")}</TableCell>
+                    <TableCell className="capitalize">{c.category ? c.category.replace("_", " ") : "—"}</TableCell>
                     <TableCell>{c.quantity}</TableCell>
                     <TableCell>{formatCurrency(c.unit_price_usd)}</TableCell>
                     <TableCell>{formatCurrency(c.line_total_usd)}</TableCell>
@@ -475,7 +475,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
                 {payments.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell>{formatCurrency(p.amount_usd)}</TableCell>
-                    <TableCell className="capitalize">{p.method.replace("_", " ")}</TableCell>
+                    <TableCell className="capitalize">{p.method ? p.method.replace("_", " ") : "—"}</TableCell>
                     <TableCell className="capitalize">{p.status}</TableCell>
                     <TableCell>{p.paid_at ? format(new Date(p.paid_at), "PPp") : "—"}</TableCell>
                     <TableCell>

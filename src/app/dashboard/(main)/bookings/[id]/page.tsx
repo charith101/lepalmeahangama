@@ -18,10 +18,12 @@ export default async function BookingDetailPage(props: { params: Promise<{ id: s
   const { data: row } = rowRes
   if (!row) notFound()
 
+  const toArray = <T,>(v: T[] | T | null | undefined): T[] => (v == null ? [] : Array.isArray(v) ? v : [v])
+
   const booking = {
     ...row,
-    invoices: row.invoices ? [row.invoices] : [],
-    payments: row.payments ? [row.payments] : [],
+    invoices: toArray(row.invoices),
+    payments: toArray(row.payments),
   }
 
   const { data: settings } = settingsRes
