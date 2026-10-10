@@ -9,8 +9,9 @@ export async function requireStaff(): Promise<AuthResult> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
   const { data: profile } = await supabase
-    .from("profiles").select("role").eq("id", user.id).single()
+    .from("profiles").select("role, active").eq("id", user.id).single()
   if (!profile) return { error: "Staff profile not found" }
+  if (profile.active === false) return { error: "Account deactivated" }
   if (profile.role !== "admin" && profile.role !== "receptionist")
     return { error: "Insufficient permissions" }
   return { user: { id: user.id, role: profile.role } }
@@ -21,8 +22,9 @@ export async function requireAnyStaff(): Promise<AuthResult> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
   const { data: profile } = await supabase
-    .from("profiles").select("role").eq("id", user.id).single()
+    .from("profiles").select("role, active").eq("id", user.id).single()
   if (!profile) return { error: "Staff profile not found" }
+  if (profile.active === false) return { error: "Account deactivated" }
   return { user: { id: user.id, role: profile.role } }
 }
 
