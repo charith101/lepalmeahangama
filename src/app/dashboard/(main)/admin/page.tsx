@@ -4,9 +4,10 @@ import { AdminPanel } from "@/components/dashboard/AdminPanel"
 export default async function AdminPage() {
   const supabase = await createClient()
 
-  const [profilesRes, categoriesRes, settingsRes, roomsRes, unitsRes, maintRes, contactRes] = await Promise.all([
+  const [profilesRes, categoriesRes, equipmentCategoriesRes, settingsRes, roomsRes, unitsRes, maintRes, contactRes] = await Promise.all([
     supabase.from("profiles").select("*").order("full_name"),
     supabase.from("room_categories").select("*").order("name"),
+    supabase.from("equipment_categories").select("*").order("name"),
     supabase.from("settings").select("*").single(),
     supabase.from("rooms").select("*, category:room_categories(*)").order("room_number"),
     supabase.from("equipment_units").select("*, category:equipment_categories(*)").order("unit_label"),
@@ -23,6 +24,7 @@ export default async function AdminPage() {
       <AdminPanel
         profiles={profilesRes.data ?? []}
         categories={categoriesRes.data ?? []}
+        equipmentCategories={equipmentCategoriesRes.data ?? []}
         settings={settingsRes.data!}
         rooms={roomsRes.data ?? []}
         units={unitsRes.data ?? []}

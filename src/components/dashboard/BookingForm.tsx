@@ -56,7 +56,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
   const router = useRouter()
   const supabase = createClient()
 
-  type RoomSelection = { roomId: string; roomNumber: string; categoryName: string }
+  type RoomSelection = { roomId: string; roomNumber: string; categoryName: string; basePrice: number }
   const [checkIn, setCheckIn] = useState<Date | undefined>()
   const [checkOut, setCheckOut] = useState<Date | undefined>()
   const [roomSelections, setRoomSelections] = useState<RoomSelection[]>([])
@@ -151,7 +151,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
     const room = rooms.find((r) => r.id === addRoomId)
     if (!room) return
     const cat = categories.find((c) => c.id === room.category_id)
-    setRoomSelections((prev) => [...prev, { roomId: room.id, roomNumber: room.room_number, categoryName: cat?.name ?? "Room" }])
+    setRoomSelections((prev) => [...prev, { roomId: room.id, roomNumber: room.room_number, categoryName: cat?.name ?? "Room", basePrice: Number(cat?.base_price_usd ?? 0) }])
     setAddRoomId(null)
   }
 
@@ -300,6 +300,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
             num_guests: numGuests,
             board_plan: boardPlan,
             board_total_usd: BOARD_PRICE_PER_NIGHT(boardPlan) * nights,
+            room_total_usd: sel.basePrice * nights,
             group_booking_id: groupBookingId,
           })
           .select("id")

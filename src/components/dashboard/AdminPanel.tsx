@@ -16,6 +16,7 @@ import { pricingUpdateSchema, settingsSchema, addUnitSchema } from "@/lib/valida
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 type RoomCategory = Database["public"]["Tables"]["room_categories"]["Row"]
+type EquipmentCategory = Database["public"]["Tables"]["equipment_categories"]["Row"]
 type Settings = Database["public"]["Tables"]["settings"]["Row"]
 type Room = Database["public"]["Tables"]["rooms"]["Row"] & { category: RoomCategory | null }
 type EquipmentUnit = Database["public"]["Tables"]["equipment_units"]["Row"] & { category: Database["public"]["Tables"]["equipment_categories"]["Row"] | null }
@@ -28,6 +29,7 @@ type ContactMessage = Database["public"]["Tables"]["contact_messages"]["Row"]
 export function AdminPanel({
   profiles: initialProfiles,
   categories: initialCategories,
+  equipmentCategories,
   settings: initialSettings,
   rooms: initialRooms,
   units: initialUnits,
@@ -36,6 +38,7 @@ export function AdminPanel({
 }: {
   profiles: Profile[]
   categories: RoomCategory[]
+  equipmentCategories: EquipmentCategory[]
   settings: Settings
   rooms: Room[]
   units: EquipmentUnit[]
@@ -111,6 +114,9 @@ export function AdminPanel({
   async function addUnit() {
     const result = addUnitSchema.safeParse({ unitLabel: newUnitLabel, categoryId: newUnitCategory })
     if (!result.success) { toast.error(result.error.issues[0].message); return }
+    if (!equipmentCategories.some((c) => c.id === newUnitCategory)) {
+      toast.error("Select an equipment category"); return
+    }
     const { data, error } = await supabase.from("equipment_units").insert({
       unit_label: newUnitLabel,
       category_id: newUnitCategory,
@@ -391,11 +397,11 @@ export function AdminPanel({
         </CardContent>
         <CardFooter className="flex items-center gap-3">
           <Input placeholder="Unit label" value={newUnitLabel} onChange={(e) => setNewUnitLabel(e.target.value)} className="w-48" />
-          <Select value={newUnitCategory} onValueChange={(v) => setNewUnitCategory(v ?? "")} items={categories.map((c) => ({ value: c.id, label: c.name }))}>
+          <Select value={newUnitCategory} onValueChange={(v) => setNewUnitCategory(v ?? "")} items={equipmentCategories.map((c) => ({ value: c.id, label: c.name.split(' — ')[0] }))}>
             <SelectTrigger className="w-48"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              {equipmentCategories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name.split(' — ')[0]}</SelectItem>
               ))}
             </SelectContent>
           </Select>

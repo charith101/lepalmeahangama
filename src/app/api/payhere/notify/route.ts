@@ -73,25 +73,32 @@ export async function POST(request: NextRequest) {
       .select("id")
 
     if (bookings?.length) {
-      await supabase.from("payments").upsert(
-        {
+      // payments.booking_id is no longer unique (a booking can hold a deposit
+      // and a balance). Webhook retries would otherwise double-record the same
+      // charge, so only record/activate/email when this charge is new.
+      const { data: existing } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("booking_id", bookings[0].id)
+        .maybeSingle()
+      if (!existing) {
+        await supabase.from("payments").insert({
           booking_id: bookings[0].id,
           amount_usd: Number(payhere_amount),
           method: "card_payhere",
           status: "completed",
           paid_at: new Date().toISOString(),
           payhere_payment_id: payment_id,
-        },
-        { onConflict: "booking_id", ignoreDuplicates: true },
-      )
+        })
 
-      await supabase
-        .from("equipment_bookings")
-        .update({ status: "active" })
-        .eq("booking_id", bookings[0].id)
-        .eq("status", "pending")
+        await supabase
+          .from("equipment_bookings")
+          .update({ status: "active" })
+          .eq("booking_id", bookings[0].id)
+          .eq("status", "pending")
 
-      await sendBookingConfirmation(bookings[0].id)
+        await sendBookingConfirmation(bookings[0].id)
+      }
     }
 
     return NextResponse.json({ status: "ok" })
