@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { CalendarIcon, Trash2, Plus, Minus, Check, BedDouble, ExternalLink } from "lucide-react"
 import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
@@ -45,11 +45,8 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
   const [avail, setAvail] = useState<Record<string, AvailState>>({})
   const initialized = useRef(false)
   const mounted = useRef(false)
-  const checkAvailabilityRef = useRef<(categoryId: string, ci: string, co: string) => void>(() => {})
-  const syncUpRef = useRef<(roomSelections: RoomSelection[], dates?: { checkIn?: string; checkOut?: string }) => void>(() => {})
-  const addSelectionRef = useRef<(categoryId: string) => void>(() => {})
 
-  async function checkAvailability(categoryId: string, ci: string, co: string) {
+  const checkAvailability = useCallback(async (categoryId: string, ci: string, co: string) => {
     const key = `${categoryId}_${ci}_${co}`
     setAvail((prev) => ({ ...prev, [key]: { loading: true, count: null, error: null } }))
     const result = await getAvailableRooms(categoryId, ci, co)
@@ -61,19 +58,17 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
         error: result.error || null,
       },
     }))
-  }
-  checkAvailabilityRef.current = checkAvailability
+  }, [])
 
-  function syncUp(roomSelections: RoomSelection[], dates?: { checkIn?: string; checkOut?: string }) {
+  const syncUp = useCallback((roomSelections: RoomSelection[], dates?: { checkIn?: string; checkOut?: string }) => {
     onChange?.({
       checkIn: dates?.checkIn ?? (checkIn ? format(checkIn, "yyyy-MM-dd") : ""),
       checkOut: dates?.checkOut ?? (checkOut ? format(checkOut, "yyyy-MM-dd") : ""),
       roomSelections,
     })
-  }
-  syncUpRef.current = syncUp
+  }, [checkIn, checkOut, onChange])
 
-  function addSelection(categoryId: string) {
+  const addSelection = useCallback((categoryId: string) => {
     if (!categoryId) return
     const cat = categories.find((c) => c.id === categoryId)
     if (!cat) return
@@ -94,18 +89,17 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
     if (checkIn && checkOut) {
       checkAvailability(categoryId, format(checkIn, "yyyy-MM-dd"), format(checkOut, "yyyy-MM-dd"))
     }
-  }
-  addSelectionRef.current = addSelection
+  }, [categories, selections, syncUp, checkIn, checkOut, checkAvailability])
 
   useEffect(() => {
     if (checkIn && checkOut) {
       if (defaultCategoryId && !initialized.current) {
         initialized.current = true
-        addSelectionRef.current(defaultCategoryId)
+        addSelection(defaultCategoryId)
       } else if (selections.length > 0) {
         const raf = requestAnimationFrame(() => {
           for (const sel of selections) {
-            checkAvailabilityRef.current(sel.categoryId, format(checkIn, "yyyy-MM-dd"), format(checkOut, "yyyy-MM-dd"))
+            checkAvailability(sel.categoryId, format(checkIn, "yyyy-MM-dd"), format(checkOut, "yyyy-MM-dd"))
           }
         })
         return () => cancelAnimationFrame(raf)
@@ -113,10 +107,10 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
     } else if (selections.length > 0) {
       queueMicrotask(() => {
         setSelections([])
-        if (mounted.current) syncUpRef.current([])
+        if (mounted.current) syncUp([])
       })
     }
-  }, [checkIn, checkOut, selections, defaultCategoryId])
+  }, [checkIn, checkOut, selections, defaultCategoryId, addSelection, checkAvailability, syncUp])
 
   useEffect(() => {
     mounted.current = true

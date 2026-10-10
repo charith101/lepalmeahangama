@@ -61,6 +61,12 @@ describe("rentalDays", () => {
   it("counts days between dates", () => {
     expect(rentalDays("2026-09-01", "2026-09-04")).toBe(3)
   })
+  it("counts a same-day rental as 1 day", () => {
+    expect(rentalDays("2026-09-04", "2026-09-04")).toBe(1)
+  })
+  it("returns 0 when end precedes start", () => {
+    expect(rentalDays("2026-09-04", "2026-09-02")).toBe(0)
+  })
   it("falls back when dates are missing or invalid", () => {
     expect(rentalDays("", "", 4)).toBe(4)
     expect(rentalDays("bogus", "2026-09-04", 2)).toBe(2)

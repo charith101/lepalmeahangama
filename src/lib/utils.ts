@@ -19,5 +19,7 @@ export function rentalDays(start?: string, end?: string, fallback: number = 0): 
   const startMs = new Date(start + "T12:00:00").getTime()
   const endMs = new Date(end + "T12:00:00").getTime()
   if (Number.isNaN(startMs) || Number.isNaN(endMs)) return Math.max(0, fallback)
-  return Math.max(0, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)))
+  const days = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24))
+  if (days < 0) return 0
+  return Math.max(1, days)
 }
