@@ -421,9 +421,7 @@ export async function recordDeposit(bookingId: string, amount: number) {
 }
 
 export async function lookupBookingByGroupId(groupBookingId: string, email: string) {
-  const auth = await requireStaff()
-  if ("error" in auth) return { error: auth.error }
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from("bookings")
