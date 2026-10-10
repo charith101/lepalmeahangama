@@ -35,7 +35,7 @@ export function QuickCheckoutSheet() {
   const router = useRouter()
   const supabase = createClient()
   const [open, setOpen] = useState(false)
-  const [bookings, setBookings] = useState<Array<Pick<BookingRow, "id"> & { guests: { full_name: string } | null; rooms: { room_number: string } | null }> | null>(null)
+  const [bookings, setBookings] = useState<Array<Pick<BookingRow, "id" | "room_total_usd"> & { guests: { full_name: string } | null; rooms: { room_number: string } | null }> | null>(null)
   const [selectedId, setSelectedId] = useState("")
   const [invoiceData, setInvoiceData] = useState<InvoiceRow | null>(null)
   const [charges, setCharges] = useState<ChargeRow[]>([])
@@ -50,7 +50,7 @@ export function QuickCheckoutSheet() {
     const today = new Date().toISOString().split("T")[0]
     supabase
       .from("bookings")
-      .select("id, guests(full_name), rooms(room_number)")
+      .select("id, room_total_usd, guests(full_name), rooms(room_number)")
       .eq("status", "checked_in")
       .lte("check_in", today)
       .order("check_in")
@@ -76,7 +76,8 @@ export function QuickCheckoutSheet() {
     fetchDetails()
   }, [selectedId, supabase])
 
-  const roomTotal = invoiceData?.room_charges_total_usd ?? 0
+  const selectedBooking = bookings?.find((b) => b.id === selectedId)
+  const roomTotal = invoiceData?.room_charges_total_usd ?? selectedBooking?.room_total_usd ?? 0
   const addonTotal = invoiceData?.addon_charges_total_usd ?? charges.reduce((s, c) => s + Number(c.line_total_usd || 0), 0)
   const surchargePct = invoiceData?.surcharge_pct_applied ?? 0
   const grandTotal = roomTotal + addonTotal + (roomTotal + addonTotal) * (surchargePct / 100)
