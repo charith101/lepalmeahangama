@@ -38,7 +38,7 @@ src/app/auth/                 login page + callback route
 src/app/dashboard/            Staff PMS  ((main)/ = admin+reception; housekeeping/ = separate)
 src/components/public/        Guest site components
 src/components/dashboard/     PMS components
-src/lib/actions/              "use server" actions (⚠ many are implemented but UNUSED — see §8)
+src/lib/actions/              "use server" actions (⚠ many are implemented but UNUSED — see §4)
 src/lib/                      auth, booking-pricing, email, payhere, validations, constants, supabase clients
 supabase/migrations/          5 security-fix migrations only (base schema lives in the live DB;
                               the authoritative in-repo snapshot is src/lib/supabase/database.types.ts)
@@ -135,7 +135,7 @@ Server pricing fetch on the wizard page (categories, equipment prices, first tra
 |---|---|---|
 | Lookup | Reference (8-char) + email → `lookupBookingByRef` → RPC `lookup_booking_by_ref` (exact email match, service-role) → redirect to portal | `src/app/booking/lookup/lookup-form.tsx`, action `src/lib/actions/bookings.ts:389-403`, RPC `supabase/migrations/20260907000000_security_fixes.sql:113` |
 | Portal page | Requires `?email=` (else → lookup); shows all rooms in group + statuses, dates, nights, totals, board, "Activities & Extras" (rentals + transfers), guest details — **read-only** | `src/app/booking/[ref]/page.tsx` (:13-20), `booking-detail-client.tsx` |
-| ⚠ Not present | Self-service cancel/modify/retry payment (guest count display defaults to "1 guest" ~`booking-detail-client.tsx:137`) | — |
+
 
 ### 1.8 Contact & content pages
 | Page | Feature details | Where |
@@ -145,11 +145,8 @@ Server pricing fetch on the wizard page (categories, equipment prices, first tra
 | Experiences | 5 hardcoded experiences; "Inquire" → generic `/contact` with no context (= `wb02`) | `src/app/experiences/page.tsx:76-81` |
 | About / Refund / Privacy / Terms | Static content pages | `src/app/{about,refund-policy,privacy-policy,terms-and-conditions}/page.tsx` |
 
-### 1.9 Guest-facing gaps (implemented surface, no backend — context for selected fixes)
-- Newsletter component exists but is **commented out** of `src/app/page.tsx:19` (`src/components/public/NewsletterSection.tsx`).
-- "Events & Gatherings" card links to **nonexistent `/events`** (`HotelIntroSection.tsx:18`) (= `wb01`).
-- Unused components never mounted: `ContactSection.tsx`, `AmenitiesSection.tsx`, `PhotoGallery.tsx`.
-- No `not-found.tsx`/`error.tsx`; no language/currency selector; no WhatsApp/social links.
+### 1.9 Known gap on this page (selected for fixing)
+- "Events & Gatherings" card links to **nonexistent `/events`** (`HotelIntroSection.tsx:18`) — selected as `wb01` (see Part 2).
 
 ## 2. Staff Dashboard (PMS)
 
@@ -189,7 +186,7 @@ Where: `src/app/dashboard/(main)/calendar/page.tsx:33`, `src/components/dashboar
 - Source: `walk_in` | `ota_manual` (+ OTA name). Board plan toggles from `BOARD_PLANS`.
 - Equipment add-ons: surfboards (tiered), bicycles, motorbikes (3 models), cars (8 models) — unit availability via RPC `get_available_equipment_units`; errors if insufficient.
 - Guest fields incl. **num_guests (1–20)** and notes; inserts `guests` (⚠ always new row), then bookings per room `status:'confirmed'` with shared `group_booking_id`, `created_by_staff_id`; handles `23P01`; direct client inserts (RLS-guarded).
-- ⚠ No guest prefill support (= `ds05`), no transfer add-on, no deposit step.
+- ⚠ No guest prefill support (= `ds05`).
 
 **Booking detail** `/dashboard/bookings/[id]` (`src/components/dashboard/BookingDetail.tsx`, 714 lines) + page `.../bookings/[id]/page.tsx` (loads booking, guest, room, charges, invoices, payments, `settings.min_deposit_pct`):
 - Status badge for all 7 statuses; guest/stay/notes cards (read-only).
@@ -210,7 +207,7 @@ Today-only merged timeline: arrivals @ **hard-coded 14:00**, departures @ **11:0
 ### 2.7 Housekeeping (`/dashboard/housekeeping`)
 - Room grid of active rooms; status buttons Dirty/Cleaning/Ready with gating (dirty→cleaning→ready enforced; ready→dirty allowed) via `updateRoomHousekeepingStatus` (requireStaff). `src/components/dashboard/HousekeepingCard.tsx`.
 - "Report Issue" dialog (description + priority low/normal/high/urgent) → direct insert into `maintenance_requests` (`HousekeepingCard.tsx:58`).
-- ⚠ Reported issues are **not visible** on this board (= `op17`); no tasks/assignee/history.
+- ⚠ Reported issues are **not visible** on this board (= `op17`).
 
 ### 2.8 Equipment (`/dashboard/equipment`)
 - Page loads **all** `equipment_bookings` + categories + non-retired units + guests; "Active rentals" count ⚠ includes returned (`EquipmentPanel.tsx:96` = `op09`).
@@ -223,12 +220,12 @@ Today-only merged timeline: arrivals @ **hard-coded 14:00**, departures @ **11:0
 - "Done" → `completed`; "X" → `cancelled` (no dialogs). Where: `src/components/dashboard/TransferPanel.tsx`.
 
 ### 2.10 Admin (`/dashboard/admin`, admin-only; `src/components/dashboard/AdminPanel.tsx`, 471 lines, 7 stacked cards)
-1. **Staff accounts**: profiles table + Activate/Deactivate toggle (direct `profiles.update({active})` :63 — instantly revokes RLS access). ⚠ No create/invite/role-change.
+1. **Staff accounts**: profiles table + Activate/Deactivate toggle (direct `profiles.update({active})` :63 — instantly revokes RLS access).
 2. **Room pricing**: per-category `$ / night` inputs → `pricingUpdateSchema` → update `room_categories.base_price_usd` (:71-77). ⚠ No category add/edit/rename (= `ad02`).
 3. **Rooms**: retire/activate (`operational_status` :105), Add Room (:146).
 4. **Hotel settings**: check_in_time, check_out_time, surcharge_pct, min_deposit_pct → `settings` update (:94). ⚠ Times stored but unused elsewhere (= `ad08`; only refs are `AdminPanel.tsx:85-295` and `src/lib/actions/settings.ts`).
 5. **Maintenance requests**: open/in_progress list, Resolve → `resolved` + `resolved_at` (:351). ⚠ No reopen/close/status edit/filters (= `ad05`); `resolved_by_staff_id` never written.
-6. **Equipment units**: list with condition badge, retire (`condition_status='retired'` :133), Add Unit (:120). ⚠ No needs-repair workflow, no category price management.
+6. **Equipment units**: list with condition badge, retire (`condition_status='retired'` :133), Add Unit (:120).
 7. **Contact messages**: list (truncated), Read/New badge, toggle `read` (:159). ⚠ No full view/delete/reply (= `ad06`).
 
 ## 3. Data Model (authoritative snapshot: `src/lib/supabase/database.types.ts`)
@@ -239,13 +236,13 @@ Today-only merged timeline: arrivals @ **hard-coded 14:00**, departures @ **11:0
 - `booking_status`: `pending_payment | confirmed | checked_in | checked_out | cancelled | no_show | maintenance_block`
 - `booking_source`: `website | walk_in | ota_manual`
 - `charge_category`: `room | late_checkout_fee | meal | transport | misc`
-- `invoice_status`: `draft | issued | paid` (⚠ `draft` never used)
-- `payment_method`: `card_payhere | cash | bank_transfer | card_polar` (⚠ `card_polar` unused)
+- `invoice_status`: `draft | issued | paid`
+- `payment_method`: `card_payhere | cash | bank_transfer | card_polar`
 - `payment_status`: `pending | completed | failed | refunded` (⚠ `failed` never written — see `bk12`)
 - `room_housekeeping_status`: `dirty | cleaning | ready`; `room_operational_status`: `active | retired`
 - `staff_role`: `admin | receptionist | housekeeping`
 - `transfer_direction`: `arrival | departure`; `transfer_status`: `scheduled | completed | cancelled`
-- `equipment_booking_status`: `active | returned | cancelled | pending` (⚠ `cancelled` unused); `equipment_condition_status`: `good | needs_maintenance | retired` (⚠ `needs_maintenance` unused)
+- `equipment_booking_status`: `active | returned | cancelled | pending`; `equipment_condition_status`: `good | needs_maintenance | retired`
 - Free-text: maintenance `status` (`open/resolved/closed`), `priority` (`low/normal/high/urgent`); booking `board_plan` (`room_only/half_board/full_board` via `boardPlanSchema`).
 
 **RPCs / DB functions:** `get_available_rooms(category, ci, co)` · `get_available_equipment_units(category, start, end)` (SECURITY DEFINER; good condition + no overlapping active rental; migration :174) · `global_search(q)` (migration :194) · `lookup_booking_by_ref(ref, email)` (service-role only; migration :113) · `get_staff_role()` (SECURITY DEFINER, active-only) · `handle_new_user()` trigger (self-signups → `housekeeping`).
@@ -274,7 +271,7 @@ Today-only merged timeline: arrivals @ **hard-coded 14:00**, departures @ **11:0
 # PART 2 — SELECTED FEATURES TO BUILD (38)
 
 > Status legend: 🐛 Bug (exists but wrong) · 🔧 Improve (partial) · 💡 Idea (started) · ✨ New.
-> IDs match `SELECTED-FEATURES.md`. Suggested build order is in §10.
+> IDs match `SELECTED-FEATURES.md`. Suggested build order is in §5.
 
 ## Booking Flow & Guest Portal (8 selected)
 
@@ -322,7 +319,7 @@ Today-only merged timeline: arrivals @ **hard-coded 14:00**, departures @ **11:0
 ### `bk12` 🔧 Handle failed payments properly
 - **Current:** `src/app/api/payhere/notify/route.ts:27` — `status_code !== "2"` returns `{status:"ok"}` and does nothing: no record, no email, booking stays `pending_payment` forever. `payments.status` enum value `failed` exists but is never used.
 - **Target:** For a verified-signature failure (e.g. status 1 = failed): record a `payments` row with `status:'failed'` (or a booking note), and email the guest ("payment didn't go through — retry here" with their portal link) using Resend. Keep `pending_payment` (or mark expiry).
-- **Files:** `src/app/api/payhere/notify/route.ts`, `src/lib/email.ts` (add `sendPaymentFailedEmail` following the `sendBookingConfirmation` HTML pattern), `src/lib/actions/bookings.ts` (retry-payment helper for the email link → guest portal `bk08` was NOT selected, so the email should point to the existing portal/lookup page).
+- **Files:** `src/app/api/payhere/notify/route.ts`, `src/lib/email.ts` (add `sendPaymentFailedEmail` following the `sendBookingConfirmation` HTML pattern), `src/lib/actions/bookings.ts`. The retry link in the email should point to the existing lookup/portal page (`/booking/lookup`) — no self-service retry-payment flow exists.
 - **Guard:** Only act on verified signatures (signature check happens before the status branch — keep that order).
 
 ## Payments, Invoices & Money (6 selected)
@@ -525,7 +522,3 @@ Today-only merged timeline: arrivals @ **hard-coded 14:00**, departures @ **11:0
 - [ ] Public flows re-tested with the booking kill-switch off (`NEXT_PUBLIC_BOOKING_ENABLED=false`)
 - [ ] PayHere flows still work in sandbox; webhook reconciliation unchanged
 - [ ] Commit per slice with conventional message (`fix:`/`feat:`), no push
-
-## 7. Known gaps NOT selected (do not build unless asked)
-
-Newsletter · gallery · amenities section · events page · WhatsApp · social links · 404/error pages · site search · room-list availability filter · room photo gallery · multi-language · multi-currency · table reservations (beyond `wb03` fix) · bookable experiences · guest self-service cancel/modify/retry-payment (`bk06`-`bk08`) · confirmation-page actions · online deposits (`py07`) · Polar gateway (`py09`) · guest edit UI · guest pagination/tags · booking editing/reopen · calendar navigation & grid-creation · charts · transfer reschedule/driver/route CRUD · housekeeping tasks · staff invites · category/seasonal CRUD beyond selection · reports/exports beyond selection · password reset · 2FA · all email types beyond `bk12` · OTA channel sync · background job scheduler · `NEXT_PUBLIC_PAYHERE_MODE` live switch.
