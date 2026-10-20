@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Le Palme Ahangama — Feature Picker</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+    --accent:#4f46e5; --accent-soft:#eef2ff;
+    --bug:#dc2626;   --bug-bg:#fef2f2;     --bug-line:#fecaca;
+    --fix:#d97706;   --fix-bg:#fffbeb;     --fix-line:#fde68a;
+    --idea:#7c3aed;  --idea-bg:#f5f3ff;    --idea-line:#ddd6fe;
+    --new:#0284c7;   --new-bg:#f0f9ff;     --new-line:#bae6fd;
+    --ok:#059669;
+    --shadow:0 1px 2px rgba(15,23,42,.05),0 8px 24px -12px rgba(15,23,42,.15);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; padding-bottom:96px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+  /* ---------- Hero ---------- */
+  header.hero{background:linear-gradient(160deg,#1e1b4b 0%,#312e81 55%,#4338ca 100%);color:#fff;padding:38px 0 30px}
+  .hero h1{margin:0 0 6px;font-size:30px;letter-spacing:-.5px}
+  .hero p.sub{margin:0 0 18px;color:#c7d2fe;font-size:15px;max-width:720px}
+  .steps{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  .step{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);
+        padding:7px 12px;border-radius:999px;font-size:13px;color:#e0e7ff}
+  .step b{display:inline-flex;width:20px;height:20px;border-radius:50%;background:#fff;color:#312e81;
+          align-items:center;justify-content:center;font-size:12px}
+  .stats{display:flex;gap:10px;flex-wrap:wrap}
+  .stat{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:10px 14px;min-width:120px}
+  .stat .n{font-size:22px;font-weight:700;line-height:1.1}
+  .stat .l{font-size:12px;color:#c7d2fe}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{position:sticky;top:0;z-index:40;background:rgba(244,246,251,.92);backdrop-filter:blur(10px);
+           border-bottom:1px solid var(--line);padding:12px 0}
+  .toolbar .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .search{position:relative;flex:1;min-width:220px}
+  .search input{width:100%;padding:10px 12px 10px 38px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;color:var(--ink)}
+  .search input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+  .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--muted)}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;color:var(--ink);
+        padding:8px 12px;border-radius:999px;font-size:13px;cursor:pointer;user-select:none;transition:.15s}
+  .chip:hover{border-color:#c7d2fe;background:var(--accent-soft)}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .chip .dot{width:9px;height:9px;border-radius:50%}
+  .chip.toggle.on{background:#0f172a;border-color:#0f172a;color:#fff}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+  .presets .lbl{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .preset{border:1px dashed #c7d2fe;background:#fff;color:#3730a3;padding:7px 12px;border-radius:10px;font-size:13px;cursor:pointer}
+  .preset:hover{background:var(--accent-soft)}
+
+  /* ---------- Legend ---------- */
+  .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:18px 0 6px}
+  .leg{border-radius:12px;padding:10px 12px;font-size:13px;border:1px solid}
+  .leg b{display:block;margin-bottom:2px}
+  .leg.bug{background:var(--bug-bg);border-color:var(--bug-line);color:#7f1d1d}
+  .leg.fix{background:var(--fix-bg);border-color:var(--fix-line);color:#78350f}
+  .leg.idea{background:var(--idea-bg);border-color:var(--idea-line);color:#4c1d95}
+  .leg.new{background:var(--new-bg);border-color:var(--new-line);color:#075985}
+
+  /* ---------- Sections ---------- */
+  section.cat{margin:26px 0 0}
+  .cat-head{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);
+            border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+  .cat-ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
+  .cat-ico svg{width:22px;height:22px}
+  .cat-head .meta{flex:1;min-width:0}
+  .cat-head h2{margin:0;font-size:17px;letter-spacing:-.2px}
+  .cat-head .desc{color:var(--muted);font-size:13px;margin-top:2px}
+  .cat-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .count-pill{font-size:12px;font-weight:700;background:var(--accent-soft);color:#3730a3;border-radius:999px;padding:5px 10px;white-space:nowrap}
+  .count-pill.done{background:#ecfdf5;color:#065f46}
+  .btn-s{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 11px;font-size:13px;cursor:pointer;color:var(--ink)}
+  .btn-s:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-s.ghost{border-style:dashed}
+
+  /* ---------- Cards ---------- */
+  .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;margin-top:12px}
+  section.cat.collapsed .items{display:none}
+  section.cat.collapsed .cat-head .chev{transform:rotate(-90deg)}
+  .chev{transition:.2s;color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-left-width:5px;border-radius:var(--radius);
+        box-shadow:var(--shadow);overflow:hidden;transition:.15s;display:flex;flex-direction:column}
+  .card:hover{transform:translateY(-1px);border-color:#c7d2fe}
+  .card.sel{box-shadow:0 0 0 2px var(--accent),var(--shadow)}
+  .card.s-bug{border-left-color:var(--bug)} .card.s-fix{border-left-color:var(--fix)}
+  .card.s-idea{border-left-color:var(--idea)} .card.s-new{border-left-color:var(--new)}
+  .card label{display:block;padding:13px 14px 12px;cursor:pointer}
+  .card .top{display:flex;gap:10px;align-items:flex-start}
+  .card input[type=checkbox]{width:20px;height:20px;flex:none;margin:2px 0 0;accent-color:var(--accent);cursor:pointer}
+  .card .t{font-weight:650;font-size:14.5px;line-height:1.35}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;
+         text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+  .badge .dot{width:7px;height:7px;border-radius:50%}
+  .b-bug{background:var(--bug-bg);color:var(--bug)} .b-bug .dot{background:var(--bug)}
+  .b-fix{background:var(--fix-bg);color:var(--fix)} .b-fix .dot{background:var(--fix)}
+  .b-idea{background:var(--idea-bg);color:var(--idea)} .b-idea .dot{background:var(--idea)}
+  .b-new{background:var(--new-bg);color:var(--new)} .b-new .dot{background:var(--new)}
+  .card .d{color:var(--muted);font-size:13px;margin-top:7px;padding-left:30px}
+  .note-wrap{padding:0 14px 12px 44px;display:none}
+  .card.sel .note-wrap{display:block}
+  .note-wrap input{width:100%;border:1px dashed #c7d2fe;background:#fafaff;border-radius:9px;padding:7px 10px;font-size:13px;color:var(--ink)}
+  .note-wrap input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .hidden{display:none !important}
+  .empty{text-align:center;color:var(--muted);padding:50px 0;font-size:15px}
+
+  /* ---------- Bottom bar ---------- */
+  .bottombar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#0f172a;color:#fff;
+             box-shadow:0 -8px 30px -10px rgba(0,0,0,.4)}
+  .bottombar .inner{max-width:1080px;margin:0 auto;padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .bb-count{font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px;flex:1;min-width:200px}
+  .bb-count .big{background:var(--accent);border-radius:999px;padding:3px 11px;font-size:13px}
+  .bb-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{border:0;border-radius:10px;padding:10px 15px;font-size:13.5px;font-weight:650;cursor:pointer}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:hover:not(:disabled){background:#4338ca}
+  .btn.light{background:#1e293b;color:#e2e8f0}
+  .btn.light:hover:not(:disabled){background:#334155}
+  .btn.danger{background:transparent;color:#fca5a5;border:1px solid #7f1d1d}
+  .btn.danger:hover{background:#7f1d1d33}
+
+  /* ---------- Toast ---------- */
+  #toast{position:fixed;right:20px;bottom:110px;background:#0f172a;color:#fff;padding:12px 16px;border-radius:12px;
+         font-size:14px;box-shadow:var(--shadow);opacity:0;transform:translateY(8px);pointer-events:none;transition:.25s;z-index:60}
+  #toast.show{opacity:1;transform:translateY(0)}
+
+  footer.page{color:var(--muted);font-size:13px;text-align:center;padding:28px 20px 10px}
+  footer.page a{color:var(--accent)}
+  @media (max-width:560px){ .items{grid-template-columns:1fr} .hero h1{font-size:24px} }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>Le Palme Ahangama — Feature Picker</h1>
+    <p class="sub">Every feature below is <b>not yet fully working</b> on your site — a bug, an unfinished improvement, a half-built idea, or something completely missing. Tick the ones you <b>want</b>. Your picks are saved automatically in this browser, and you can export them as a checklist at the end.</p>
+    <div class="steps">
+      <span class="step"><b>1</b> Use filters or presets to narrow the list</span>
+      <span class="step"><b>2</b> Tick everything you want (add a note if useful)</span>
+      <span class="step"><b>3</b> Click “Download .md” and hand it back</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n" id="st-total">–</div><div class="l">Features reviewed</div></div>
+      <div class="stat"><div class="n" id="st-bug">–</div><div class="l">🐛 Bugs to fix</div></div>
+      <div class="stat"><div class="n" id="st-fix">–</div><div class="l">🔧 Things to improve</div></div>
+      <div class="stat"><div class="n" id="st-idea">–</div><div class="l">💡 Ideas already started</div></div>
+      <div class="stat"><div class="n" id="st-new">–</div><div class="l">✨ Brand new features</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="wrap">
+    <div class="row">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="q" type="search" placeholder="Search features… (e.g. “cancel”, “email”, “calendar”, “payment”)" />
+      </div>
+      <button class="chip on" data-status="all">All</button>
+      <button class="chip" data-status="bug"><span class="dot" style="background:var(--bug)"></span>🐛 Bugs</button>
+      <button class="chip" data-status="fix"><span class="dot" style="background:var(--fix)"></span>🔧 Improve</button>
+      <button class="chip" data-status="idea"><span class="dot" style="background:var(--idea)"></span>💡 Ideas</button>
+      <button class="chip" data-status="new"><span class="dot" style="background:var(--new)"></span>✨ New</button>
+      <button class="chip toggle" id="only-sel">⭐ Only my picks</button>
+    </div>
+    <div class="presets">
+      <span class="lbl">Quick presets</span>
+      <button class="preset" id="p-bugs"> select every 🐛 bug</button>
+      <button class="preset" id="p-essentials">select “launch essentials” (7 common picks)</button>
+      <button class="preset" id="p-guest">select everything guests see</button>
+      <button class="preset" id="p-all">select everything</button>
+      <button class="preset" id="p-none">clear all</button>
+    </div>
+    <div class="presets" style="margin-top:8px">
+      <span class="lbl">Sections</span>
+      <button class="preset" id="expand-all">expand all</button>
+      <button class="preset" id="collapse-all">collapse all</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="legend">
+    <div class="leg bug"><b>🐛 Bug — it exists but is wrong</b>Something implemented doesn't work correctly (e.g. wrong dates, wrong counts).</div>
+    <div class="leg fix"><b>🔧 Improve — exists but incomplete</b>The feature works partly, or is inconsistent / missing polish.</div>
+    <div class="leg idea"><b>💡 Idea — started but never finished</b>There's a button, page or database field waiting to be wired up.</div>
+    <div class="leg new"><b>✨ New — doesn't exist at all</b>Building it from scratch (e.g. WhatsApp, reports, staff invites).</div>
+  </div>
+  <div id="sections"></div>
+  <div class="empty hidden" id="empty">No features match your filters.</div>
+</div>
+
+<footer class="page">
+  Built from a full code review of the project · your selections are stored only in this browser (localStorage).<br/>
+  <a href="#" id="reset-link">Reset all saved picks and notes</a>
+</footer>
+
+<div class="bottombar">
+  <div class="inner">
+    <div class="bb-count"><span class="big" id="bb-sel">0</span> selected <span style="color:#94a3b8;font-weight:400" id="bb-total">of 0</span></div>
+    <div class="bb-actions">
+      <button class="btn light" id="btn-copy" disabled>Copy checklist</button>
+      <button class="btn primary" id="btn-md" disabled>Download .md</button>
+      <button class="btn light" id="btn-json" disabled>Download .json</button>
+      <button class="btn danger" id="btn-clear" disabled>Clear</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================== DATA ============================== */
+const CATEGORIES = [
+  {
+    id:"booking", title:"Booking Flow & Guest Portal", icon:"calendar",
+    desc:"The online reservation wizard, payment hand-off, confirmation and the guest's own “manage booking” pages.",
+    items:[
+      {id:"bk01", s:"bug", t:"Guest count is never captured on website bookings", d:"The hero bar has a guests dropdown (1–6) but the booking page ignores it, and the wizard has no guest field — every website booking ends up stored with a null guest count (shown as “1 guest”)."},
+      {id:"bk02", s:"bug", t:"Departure airport transfers are booked on the check-in date", d:"When a guest books a departure transfer, the pickup is scheduled on their arrival date instead of the day they leave."},
+      {id:"bk03", s:"bug", t:"Extras silently shrink when stock is short", d:"If fewer surfboards/vehicles are free than requested at payment time, the booking quietly charges for fewer units with no message to the guest."},
+      {id:"bk04", s:"fix", t:"Wrong button label on step 1 of the wizard", d:"Step 1 says “Next: Add Extras” but the next step is actually Board Plan — a small but confusing label bug."},
+      {id:"bk05", s:"new", t:"“How many guests?” field in the booking form", d:"Add a number-of-guests input to the wizard so the hotel knows how many people are staying (also fixes bk01)."},
+      {id:"bk06", s:"new", t:"Guest self-service cancellation page", d:"Your refund policy promises free cancellation 7+ days out, but only staff can cancel today. Let guests cancel with their reference + email."},
+      {id:"bk07", s:"new", t:"Guest self-service booking modification", d:"Let guests change dates, room type or guest details themselves before arrival."},
+      {id:"bk08", s:"new", t:"Retry payment / “pay later” for unpaid bookings", d:"If a guest abandons checkout, they currently have no way to pay from their booking page — the booking just sits as “pending payment”."},
+      {id:"bk09", s:"fix", t:"Confirmation page should reflect the real status", d:"It always shows “Booking Confirmed” even while payment is still pending — make the heading match the live status and refresh until the payment lands."},
+      {id:"bk10", s:"new", t:"Useful actions on the confirmation page", d:"Add to calendar (.ics), re-email the receipt, and a clear “Manage my booking” button."},
+      {id:"bk11", s:"fix", t:"Explain what happens after a cancelled payment", d:"The payment-cancel link just drops guests back on the booking page with no message — and their half-finished booking keeps blocking the room."},
+      {id:"bk12", s:"fix", t:"Handle failed payments properly", d:"If PayHere reports a failed payment, nothing is recorded, no email is sent, and the booking silently stays pending forever."},
+      {id:"bk13", s:"new", t:"Auto-release rooms held by abandoned checkouts", d:"Bookings stuck at “pending payment” block availability permanently — add an automatic expiry (e.g. release after 30–60 minutes)."}
+    ]
+  },
+  {
+    id:"payments", title:"Payments, Invoices & Money", icon:"card",
+    desc:"PayHere checkout, deposits, refunds, invoices and everything to do with charging guests.",
+    items:[
+      {id:"py01", s:"bug", t:"Refund button breaks when a booking has more than one card payment", d:"The refund code assumes exactly one completed PayHere payment per booking; a second payment (e.g. deposit + balance) makes it fail."},
+      {id:"py02", s:"fix", t:"Partial payments mark the whole invoice as paid", d:"Recording a payment flips the invoice to “paid” even if only part of the balance was collected — add proper balance tracking."},
+      {id:"py03", s:"fix", t:"Regenerating an invoice silently overwrites the old one", d:"Add a warning / versioning so a corrected invoice doesn't just replace the previous one without notice."},
+      {id:"py04", s:"fix", t:"Extra charges can't be edited or deleted after posting", d:"A wrong minibar/meal charge has to be compensated with another charge — allow staff to fix mistakes."},
+      {id:"py05", s:"fix", t:"Moving a guest to another room doesn't recalculate the price", d:"If the new room category has a different rate, the total stays wrong."},
+      {id:"py06", s:"fix", t:"Deposits are always recorded as “cash”", d:"Let staff choose the deposit method (cash / bank transfer / card) instead of it being hard-coded."},
+      {id:"py07", s:"new", t:"Take online deposits instead of the full amount", d:"The minimum-deposit % setting exists but online checkout always charges 100% up front. Let guests pay just the deposit online and the rest at the hotel."},
+      {id:"py08", s:"new", t:"Switch PayHere from sandbox to live mode", d:"The live checkout and refund URLs are hard-coded to PayHere's test environment — required before you can take real money."},
+      {id:"py09", s:"idea", t:"Alternative payment gateway (Polar)", d:"The database already has Polar payment fields, but no integration code exists. Useful if you ever want a PayHere alternative."}
+    ]
+  },
+  {
+    id:"website", title:"Guest-Facing Website", icon:"globe",
+    desc:"Everything on the public site outside the booking wizard — pages, content, contact and small usability wins.",
+    items:[
+      {id:"wb01", s:"bug", t:"“Events & Gatherings” card leads to a 404", d:"The home page card links to /events, which doesn't exist."},
+      {id:"wb02", s:"fix", t:"Experience enquiries lose their context", d:"“Inquire about this experience” opens a blank contact form — pre-fill it with which experience the guest clicked."},
+      {id:"wb03", s:"fix", t:"“Reserve a Table” on the Dine page sends people to book a room", d:"Either build a real table inquiry or remove/replace the misleading button."},
+      {id:"wb04", s:"idea", t:"Events & Gatherings page", d:"Private dining, celebrations and workshops cards already exist on the home page with nothing behind them — build the page they link to."},
+      {id:"wb05", s:"idea", t:"Newsletter signup", d:"The component is fully built but switched off and has no backend — wire it to your email tool (e.g. Resend) and turn it on."},
+      {id:"wb06", s:"idea", t:"Photo gallery", d:"A gallery component exists but was never placed on any page — the site currently has no gallery at all."},
+      {id:"wb07", s:"idea", t:"Amenities section", d:"A “Sun terrace, garden, WiFi, kitchen…” icon grid exists in the code but is unused — great for the home or rooms page."},
+      {id:"wb08", s:"new", t:"Availability search on the Rooms page", d:"Let guests filter the room list by dates, price or occupancy instead of browsing everything blindly."},
+      {id:"wb09", s:"new", t:"Image gallery + zoom on room pages", d:"Room pages show a single photo — add multiple photos with a lightbox/zoom."},
+      {id:"wb10", s:"new", t:"WhatsApp / click-to-chat button", d:"Your booking-lookup page even mentions WhatsApp — add a floating chat button (high conversion for hotels)."},
+      {id:"wb11", s:"new", t:"Social media links", d:"No Instagram/Facebook/TikTok links anywhere — add them to the footer."},
+      {id:"wb12", s:"new", t:"Custom 404 and error pages", d:"Broken links currently show the default Next.js error — add friendly branded pages."},
+      {id:"wb13", s:"idea", t:"Restaurant table reservations", d:"There is no table-booking feature at all — could be a simple date/party-size inquiry form."},
+      {id:"wb14", s:"idea", t:"Bookable experiences (surf lessons, safaris…)", d:"Experiences are read-only today — let guests request/pricing-book activities during their stay."},
+      {id:"wb15", s:"new", t:"Multi-language support", d:"Everything is English-only — relevant if you get many non-English guests."},
+      {id:"wb16", s:"new", t:"Multi-currency display", d:"Prices are hard-coded in USD — show approximate prices in other currencies."},
+      {id:"wb17", s:"new", t:"Search on the public website", d:"No way for guests to search rooms or content from the site header."}
+    ]
+  },
+  {
+    id:"dashboard", title:"Staff Dashboard — Bookings & Guests", icon:"users",
+    desc:"How reception manages reservations, guests and the guest list.",
+    items:[
+      {id:"ds01", s:"new", t:"Edit a booking after it's created", d:"Dates, room, source, notes and guest details cannot be changed at all today (only “move room” while checked-in)."},
+      {id:"ds02", s:"new", t:"Reopen cancelled / no-show bookings", d:"Once cancelled there's no undo — staff must recreate the booking from scratch."},
+      {id:"ds03", s:"fix", t:"Bookings list has no search, filters or export", d:"It silently caps at 50 rows with no way to filter by status/date/guest or export to CSV."},
+      {id:"ds04", s:"fix", t:"“Walk-in” and “New Booking” buttons are identical", d:"Both open the same form — pre-fill walk-in details so reception can tell them apart."},
+      {id:"ds05", s:"bug", t:"“New booking for this guest” doesn't actually attach the guest", d:"It opens a blank form that creates a duplicate guest record instead of pre-filling the existing guest."},
+      {id:"ds06", s:"new", t:"Pick an existing guest when creating a booking", d:"Search and select returning guests instead of always creating a new record (stops duplicates building up)."},
+      {id:"ds07", s:"new", t:"Add an airport transfer inside the staff booking form", d:"The guest wizard offers transfers, but reception can't add one when taking a booking by phone."},
+      {id:"ds08", s:"new", t:"Collect a deposit when taking a booking", d:"No deposit step exists when reception creates a booking — only tracked afterwards."},
+      {id:"ds09", s:"fix", t:"Quick check-out skips invoicing and room status", d:"The dashboard quick check-out doesn't generate the invoice or mark the room dirty, unlike the full booking page — make the two consistent."},
+      {id:"ds10", s:"new", t:"Edit guest profile details", d:"Guest contact info can never be corrected (typo'd email breaks their booking lookup)."},
+      {id:"ds11", s:"new", t:"Guest list pagination & sorting", d:"The guest register loads everyone at once with no paging or sort controls."},
+      {id:"ds12", s:"idea", t:"Guest tags, notes and repeat-guest insights", d:"Mark VIPs, honeymoon, OTA guests… plus (later) loyalty perks and bulk email."}
+    ]
+  },
+  {
+    id:"ops", title:"Staff Dashboard — Operations & Rooms", icon:"bed",
+    desc:"The daily operations board: calendar, room status, housekeeping, rentals and transfers.",
+    items:[
+      {id:"op01", s:"fix", t:"Room status cards on the dashboard aren't clickable", d:"The colour-coded room grid is informative but you can't tap a room to see the booking or check-in the guest."},
+      {id:"op02", s:"fix", t:"Revenue card doesn't drill down", d:"Today / month / outstanding figures can't be clicked through to the payments behind them, nor exported."},
+      {id:"op03", s:"new", t:"Charts & statistics on the dashboard home", d:"Occupancy and revenue trends, arrival charts — currently only plain number cards, no graphs anywhere."},
+      {id:"op04", s:"new", t:"Calendar navigation (prev/next, jump to date)", d:"The room calendar is stuck on a fixed 30-day window starting today — no way to look at next month."},
+      {id:"op05", s:"idea", t:"Create bookings straight from the calendar grid", d:"Click or drag an empty cell to start a booking for that room/date (big time-saver for reception)."},
+      {id:"op06", s:"fix", t:"Calendar filters, legend and hidden statuses", d:"No legend, no filters, and cancelled/no-show bookings don't appear at all."},
+      {id:"op07", s:"fix", t:"Operations timeline is read-only and capped", d:"It shows only today's first 15 events with hard-coded times (arrivals 14:00, departures 11:00) and no buttons — add real times, actions, a date picker and pagination."},
+      {id:"op08", s:"bug", t:"Staff “New Rental” dialog skips availability checks", d:"Reception can double-book a surfboard/car here because the overlap check used in the booking flow isn't applied."},
+      {id:"op09", s:"bug", t:"Equipment “active rentals” count includes returned items", d:"The headline number on the equipment page is wrong."},
+      {id:"op10", s:"fix", t:"Equipment return needs confirmation & undo", d:"One stray click marks something returned with no confirmation and no way back."},
+      {id:"op11", s:"new", t:"Manage equipment rentals properly", d:"No editing, cancelling, condition tracking (needs repair), or history of past rentals."},
+      {id:"op12", s:"fix", t:"Transfers aren't linked to bookings", d:"Manually created transfers float free of the guest's reservation, so check-in doesn't show them."},
+      {id:"op13", s:"new", t:"Reschedule / re-open transfers", d:"No way to change the time of a transfer, or reverse a cancellation."},
+      {id:"op14", s:"idea", t:"Driver & vehicle assignment for transfers", d:"Assign a driver/vehicle and track the run — currently transfers are just a list with a Done button."},
+      {id:"op15", s:"new", t:"Manage airport transfer routes in admin", d:"Routes and prices can only be changed directly in the database."},
+      {id:"op16", s:"idea", t:"Housekeeping task lists, assignee & history", d:"Today housekeeping is a single status per room — add per-room tasks, who cleaned it, when, and photos."},
+      {id:"op17", s:"fix", t:"Maintenance issues aren't visible on the housekeeping board", d:"Housekeeping can report issues but can't see any reported issues (they only show in the admin panel)."}
+    ]
+  },
+  {
+    id:"admin", title:"Admin & Settings", icon:"sliders",
+    desc:"The admin-only area: staff accounts, pricing, rooms, maintenance, inbox and reports.",
+    items:[
+      {id:"ad01", s:"new", t:"Create staff accounts, assign roles & invites", d:"Admin can only activate/deactivate accounts — creating a new staff user currently requires database access."},
+      {id:"ad02", s:"fix", t:"Room category management (add / edit / rename)", d:"Only the price of existing categories can be changed — adding a new room type needs the database."},
+      {id:"ad03", s:"idea", t:"Seasonal rates & minimum-stay rules", d:"Pricing is a single flat rate all year (e.g. no higher rates for Christmas/Sri Lankan peak season, no minimum nights)."},
+      {id:"ad04", s:"new", t:"Equipment category management", d:"Rental prices (surfboards, bikes, motorbikes, cars) and new categories can only be edited in the database."},
+      {id:"ad05", s:"fix", t:"Maintenance requests: reopen, close, filter", d:"Issues can only be marked “resolved” — no status editing, priority changes, filters, or reopening by mistake."},
+      {id:"ad06", s:"fix", t:"Contact inbox improvements", d:"Messages are truncated with no full view, no delete, and no reply-by-email."},
+      {id:"ad07", s:"new", t:"Reports & exports (CSV)", d:"Occupancy, revenue, bookings and guest exports for your accountant or channel reporting."},
+      {id:"ad08", s:"fix", t:"Check-in / check-out times aren't enforced anywhere", d:"The times saved in settings are stored but never used (late-checkout fees, availability windows, guest-facing copy)."},
+      {id:"ad09", s:"new", t:"Staff password reset (“forgot password”)", d:"No self-service password recovery exists — a forgotten password needs manual intervention."},
+      {id:"ad10", s:"idea", t:"Two-factor authentication for staff", d:"Extra login security for admin/reception accounts."}
+    ]
+  },
+  {
+    id:"email", title:"Emails & Notifications", icon:"mail",
+    desc:"Automated messages. Today exactly one email exists: the booking confirmation after online payment.",
+    items:[
+      {id:"em01", s:"new", t:"Cancellation confirmation email", d:"Neither guest nor staff get an email when a booking is cancelled."},
+      {id:"em02", s:"new", t:"Refund receipt email", d:"Refunds issued through the dashboard produce no email trail."},
+      {id:"em03", s:"new", t:"Pre-arrival email + check-in/check-out reminders", d:"Send directions, check-in time and a friendly reminder before arrival, and a thank-you after departure."},
+      {id:"em04", s:"new", t:"Payment-failure notification", d:"If an online payment fails, the guest is never told (their booking just stays unpaid)."},
+      {id:"em05", s:"idea", t:"Staff notification emails", d:"Email reception when a new website booking or contact message arrives."},
+      {id:"em06", s:"idea", t:"Real WhatsApp messaging", d:"Your booking-lookup copy already promises WhatsApp — integrate it for confirmations/reminders."}
+    ]
+  },
+  {
+    id:"hood", title:"Under the Hood — Security & Reliability", icon:"shield",
+    desc:"Invisible to guests, but worth knowing about. Pick any you want fixed.",
+    items:[
+      {id:"uh01", s:"fix", t:"Confirmation pages are visible to anyone with the link", d:"Anyone who guesses/sees a booking's ID number can open its confirmation page (guest names, dates, prices) without logging in."},
+      {id:"uh02", s:"fix", t:"Guest booking portal uses an email address as its “password”", d:"The manage-booking page is protected only by an email in the URL — replace with a secure one-time token."},
+      {id:"uh03", s:"fix", t:"Some admin screens write data straight from the browser", d:"A few admin panels rely only on database rules instead of proper permission checks in the app — tighten this up."},
+      {id:"uh04", s:"new", t:"OTA channel manager / calendar sync", d:"Booking.com/Airbnb bookings can only be entered manually — no iCal import or two-way sync, which risks double bookings."},
+      {id:"uh05", s:"idea", t:"Background jobs (scheduled tasks)", d:"There is currently no automation of any kind — this is the foundation needed for booking expiry, reminders and nightly reports."}
+    ]
+  }
+];
+
+const ICONS = {
+  calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  card:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
+  globe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 3 2.6 15 0 18M12 3c-2.6 3-2.6 15 0 18"/></svg>',
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M17 3.5a4 4 0 0 1 0 7.7M22 21v-1a5 5 0 0 0-3-4.6"/></svg>',
+  bed:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 4v16M2 9h15a3 3 0 0 1 3 3v8M2 16h18"/><circle cx="7" cy="9" r="2"/></svg>',
+  sliders:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>',
+  mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+};
+
+const STATUS_LABEL = { bug:"Bug", fix:"Improve", idea:"Idea", new:"New" };
+
+/* Presets */
+const ESSENTIALS = ["bk01","bk02","bk06","bk09","bk12","bk13","py08"];
+const GUEST_SEEN = new Set(["website"]);
+
+/* ============================== STATE ============================== */
+const LS_KEY = "lepalme-feature-picker-v1";
+let state = { sel:{}, notes:{} };   // sel[id]=true, notes[id]="text"
+try { const raw = localStorage.getItem(LS_KEY); if(raw) state = Object.assign(state, JSON.parse(raw)); } catch(e){}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+
+/* ============================== RENDER ============================== */
+const sectionsEl = document.getElementById("sections");
+let filterStatus = "all", query = "", onlySelected = false;
+
+function allItems(){ return CATEGORIES.flatMap(c => c.items); }
+
+function matches(it){
+  if(onlySelected && !state.sel[it.id]) return false;
+  if(filterStatus !== "all" && it.s !== filterStatus) return false;
+  if(query){
+    const hay = (it.t + " " + it.d).toLowerCase();
+    if(!hay.includes(query)) return false;
+  }
+  return true;
+}
+
+function render(){
+  const q = query.trim();
+  let anyVisible = false;
+  sectionsEl.innerHTML = "";
+
+  CATEGORIES.forEach(cat=>{
+    const visible = cat.items.filter(matches);
+    const selCount = cat.items.filter(i=>state.sel[i.id]).length;
+    const sec = document.createElement("section");
+    sec.className = "cat";
+    sec.id = "cat-" + cat.id;
+    if(visible.length === 0 && (q || filterStatus!=="all" || onlySelected)) { /* skip empty filtered sections */ }
+    else anyVisible = true;
+
+    const done = selCount === cat.items.length;
+    sec.innerHTML = `
+      <div class="cat-head">
+        <div class="cat-ico">${ICONS[cat.icon] || ""}</div>
+        <div class="meta">
+          <h2>${cat.title}</h2>
+          <div class="desc">${cat.desc}</div>
+        </div>
+        <div class="cat-actions">
+          <span class="count-pill ${done?"done":""}">${selCount}/${cat.items.length} picked</span>
+          <button class="btn-s" data-cat-all="${cat.id}">${done ? "clear section" : "pick all"}</button>
+          <button class="btn-s ghost" data-cat-toggle="${cat.id}"><span class="chev">▾</span></button>
+        </div>
+      </div>
+      <div class="items"></div>`;
+
+    const itemsEl = sec.querySelector(".items");
+    visible.forEach(it=>{
+      const card = document.createElement("div");
+      card.className = "card s-" + it.s + (state.sel[it.id] ? " sel" : "");
+      card.dataset.id = it.id;
+      card.innerHTML = `
+        <label>
+          <div class="top">
+            <input type="checkbox" ${state.sel[it.id] ? "checked" : ""} aria-label="${it.t.replace(/"/g,"&quot;")}" />
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;gap:8px;align-items:flex-start;justify-content:space-between">
+                <div class="t">${it.t}</div>
+                <span class="badge b-${it.s}"><span class="dot"></span>${STATUS_LABEL[it.s]}</span>
+              </div>
+            </div>
+          </div>
+          <div class="d">${it.d}</div>
+        </label>
+        <div class="note-wrap">
+          <input class="note" type="text" placeholder="Add a note for this pick (optional)…" value="${(state.notes[it.id]||"").replace(/"/g,"&quot;")}" />
+        </div>`;
+      itemsEl.appendChild(card);
+    });
+
+    if(visible.length === 0){
+      const p = document.createElement("div");
+      p.className = "empty";
+      p.style.padding = "18px 0";
+      p.textContent = "Nothing matches here.";
+      itemsEl.appendChild(p);
+    }
+    sectionsEl.appendChild(sec);
+  });
+
+  document.getElementById("empty").classList.toggle("hidden", anyVisible);
+  updateBottom();
+}
+
+function updateBottom(){
+  const total = allItems().length;
+  const sel = allItems().filter(i=>state.sel[i.id]).length;
+  document.getElementById("bb-sel").textContent = sel;
+  document.getElementById("bb-total").textContent = "of " + total;
+  ["btn-copy","btn-md","btn-json","btn-clear"].forEach(id=>{
+    document.getElementById(id).disabled = sel === 0;
+  });
+}
+
+/* ============================== EVENTS ============================== */
+sectionsEl.addEventListener("change", e=>{
+  const card = e.target.closest(".card");
+  if(!card) return;
+  const id = card.dataset.id;
+  if(e.target.classList.contains("note")){
+    state.notes[id] = e.target.value.trim();
+  } else {
+    if(e.target.checked){ state.sel[id] = true; card.classList.add("sel"); }
+    else { delete state.sel[id]; card.classList.remove("sel"); }
+    refreshCounts();
+  }
+  save();
+  updateBottom();
+});
+sectionsEl.addEventListener("input", e=>{
+  if(e.target.classList.contains("note")){
+    const card = e.target.closest(".card");
+    state.notes[card.dataset.id] = e.target.value.trim();
+    save();
+  }
+});
+sectionsEl.addEventListener("click", e=>{
+  const allBtn = e.target.closest("[data-cat-all]");
+  if(allBtn){
+    const cat = CATEGORIES.find(c=>c.id === allBtn.dataset.catAll);
+    const allOn = cat.items.every(i=>state.sel[i.id]);
+    cat.items.forEach(i=>{ if(allOn) delete state.sel[i.id]; else state.sel[i.id]=true; });
+    save(); render();
+    return;
+  }
+  const tog = e.target.closest("[data-cat-toggle]");
+  if(tog){ tog.closest("section.cat").classList.toggle("collapsed"); }
+});
+
+function refreshCounts(){
+  document.querySelectorAll("section.cat").forEach(sec=>{
+    const cat = CATEGORIES.find(c=>"cat-"+c.id === sec.id);
+    const n = cat.items.filter(i=>state.sel[i.id]).length;
+    const pill = sec.querySelector(".count-pill");
+    pill.textContent = n + "/" + cat.items.length + " picked";
+    const done = n === cat.items.length;
+    pill.classList.toggle("done", done);
+    sec.querySelector("[data-cat-all]").textContent = done ? "clear section" : "pick all";
+  });
+}
+
+/* toolbar */
+document.getElementById("q").addEventListener("input", e=>{ query = e.target.value.toLowerCase(); render(); });
+document.querySelectorAll(".chip[data-status]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".chip[data-status]").forEach(b=>b.classList.remove("on"));
+    btn.classList.add("on");
+    filterStatus = btn.dataset.status;
+    render();
+  });
+});
+document.getElementById("only-sel").addEventListener("click", e=>{
+  onlySelected = !onlySelected;
+  e.currentTarget.classList.toggle("on", onlySelected);
+  render();
+});
+document.getElementById("p-bugs").addEventListener("click", ()=>{
+  allItems().filter(i=>i.s==="bug").forEach(i=>state.sel[i.id]=true);
+  save(); render(); toast("All bugs selected 🐛");
+});
+document.getElementById("p-essentials").addEventListener("click", ()=>{
+  ESSENTIALS.forEach(id=>state.sel[id]=true);
+  save(); render(); toast("Launch essentials selected ✅");
+});
+document.getElementById("p-guest").addEventListener("click", ()=>{
+  CATEGORIES.filter(c=>GUEST_SEEN.has(c.id)).concat(CATEGORIES.filter(c=>c.id==="booking"||c.id==="email")).forEach(c=>{
+    c.items.forEach(i=>state.sel[i.id]=true);
+  });
+  save(); render(); toast("Everything guests see selected ✨");
+});
+document.getElementById("p-all").addEventListener("click", ()=>{
+  allItems().forEach(i=>state.sel[i.id]=true);
+  save(); render(); toast("Everything selected");
+});
+document.getElementById("p-none").addEventListener("click", ()=>{ clearAll(); });
+document.getElementById("btn-clear").addEventListener("click", ()=>{ clearAll(); });
+function clearAll(){ state.sel = {}; save(); render(); toast("Selection cleared"); }
+document.getElementById("expand-all").addEventListener("click", ()=>document.querySelectorAll("section.cat").forEach(s=>s.classList.remove("collapsed")));
+document.getElementById("collapse-all").addEventListener("click", ()=>document.querySelectorAll("section.cat").forEach(s=>s.classList.add("collapsed")));
+document.getElementById("reset-link").addEventListener("click", e=>{
+  e.preventDefault();
+  if(confirm("Reset all saved picks and notes?")){ localStorage.removeItem(LS_KEY); state={sel:{},notes:{}}; render(); toast("Everything reset"); }
+});
+
+/* ============================== EXPORT ============================== */
+function pickedItems(){
+  const out = [];
+  CATEGORIES.forEach(cat=>cat.items.forEach(i=>{ if(state.sel[i.id]) out.push({cat:cat.title, ...i, note:state.notes[i.id]||""}); }));
+  return out;
+}
+function buildMarkdown(){
+  const items = pickedItems();
+  const byCat = {};
+  items.forEach(i=>{ (byCat[i.cat] = byCat[i.cat] || []).push(i); });
+  const today = new Date().toISOString().slice(0,10);
+  let md = "# Le Palme Ahangama — Selected Features\n\n";
+  md += "_Picked " + today + " with FEATURE-PICKER.html · " + items.length + " of " + allItems().length + " selected_\n\n";
+  md += "**Legend:** 🐛 Bug · 🔧 Improve · 💡 Idea started · ✨ New feature\n\n";
+  Object.keys(byCat).forEach(cat=>{
+    md += "## " + cat + " (" + byCat[cat].length + ")\n\n";
+    byCat[cat].forEach(i=>{
+      const emoji = i.s==="bug"?"🐛":i.s==="fix"?"🔧":i.s==="idea"?"💡":"✨";
+      md += "- [ ] " + emoji + " **" + i.t + "** (" + STATUS_LABEL[i.s] + ")\n";
+      md += "  - " + i.d + "\n";
+      if(i.note) md += "  - 📝 **Note:** " + i.note + "\n";
+    });
+    md += "\n";
+  });
+  md += "---\n_Generated from FEATURE-PICKER.html — hand this file back to the assistant to plan/build these features._\n";
+  return md;
+}
+function buildJSON(){
+  return JSON.stringify({
+    project:"Le Palme Ahangama",
+    generated:new Date().toISOString(),
+    selectedCount:pickedItems().length,
+    totalCount:allItems().length,
+    selected:pickedItems().map(i=>({id:i.id, category:i.cat, status:i.s, title:i.t, description:i.d, note:i.note}))
+  }, null, 2);
+}
+function download(name, text, type){
+  const blob = new Blob([text], {type:type});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+document.getElementById("btn-md").addEventListener("click", ()=>{ download("SELECTED-FEATURES.md", buildMarkdown(), "text/markdown"); toast("Downloaded SELECTED-FEATURES.md"); });
+document.getElementById("btn-json").addEventListener("click", ()=>{ download("selected-features.json", buildJSON(), "application/json"); toast("Downloaded JSON"); });
+document.getElementById("btn-copy").addEventListener("click", async ()=>{
+  const text = buildMarkdown();
+  try{ await navigator.clipboard.writeText(text); toast("Checklist copied to clipboard"); }
+  catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); toast("Checklist copied to clipboard"); }
+    catch(err){ toast("Copy failed — use Download instead"); }
+    ta.remove();
+  }
+});
+
+/* ============================== TOAST & INIT ============================== */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+(function init(){
+  const items = allItems();
+  document.getElementById("st-total").textContent = items.length;
+  ["bug","fix","idea","new"].forEach(s=>{
+    document.getElementById("st-"+s).textContent = items.filter(i=>i.s===s).length;
+  });
+  render();
+})();
+</script>
+</body>
+</html>
