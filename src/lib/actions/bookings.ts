@@ -8,6 +8,8 @@ import { guestSchema } from "@/lib/validations"
 import { requireStaff } from "@/lib/auth"
 import { equipmentItemPrice, transferPrice, computeBookingTotal } from "@/lib/booking-pricing"
 import { refundPayherePayment } from "@/lib/payhere-refund"
+import { hotelLocalToUtcIso } from "@/lib/datetime"
+import { generateInvoice } from "./billing"
 import { BOARD_PLANS, BOARD_PRICE_PER_NIGHT, type BoardPlan } from "@/lib/constants"
 
 async function validateAndComputeRoomTotal(roomId: string, checkIn: string, checkOut: string): Promise<number | string> {
@@ -118,16 +120,17 @@ export async function createBooking(data: {
 }
 
 export async function createPayHereBooking(data: {
-  guest: { full_name: string; email?: string; phone?: string; nationality?: string; nic_or_passport?: string }
+  guest: { full_name: string; email?: string; phone?: string; nationality?: string; nic_or_passport?: string; numGuests?: number }
   roomSelections: Array<{
     room_id: string
     check_in: string
     check_out: string
     num_guests?: number
   }>
+  numGuests?: number
   board_plan?: string
   equipment?: Array<{ unit_id: string; start_date: string; end_date: string }>
-  transfer?: { route_id: string; direction: "arrival" | "departure"; flight_number?: string; transfer_datetime: string }
+  transfer?: { route_id: string; direction: "arrival" | "departure"; flight_number?: string; transferTime?: string; transfer_datetime?: string }
   }) {
   if (process.env.NEXT_PUBLIC_BOOKING_ENABLED === "false") {
     return { error: "Online booking is temporarily unavailable. Please contact us directly." }
@@ -137,15 +140,37 @@ export async function createPayHereBooking(data: {
     ? (data.board_plan as BoardPlan)
     : "room_only"
   const boardPricePerNight = BOARD_PRICE_PER_NIGHT(boardPlan)
+  // bk01/bk05: the wizard splits the party across rooms (roomSelections[].num_guests);
+  // a single party size (payload numGuests or guest.numGuests) applies to all rooms.
+  const partyFallback = data.numGuests ?? data.guest.numGuests
+  const partySize = partyFallback ??
+    data.roomSelections.reduce((sum, r) => sum + (r.num_guests ?? 0), 0)
   const guestResult = guestSchema.safeParse({
     fullName: data.guest.full_name,
     email: data.guest.email ?? "",
     phone: data.guest.phone ?? "",
     nationality: data.guest.nationality ?? "",
     nic_passport: data.guest.nic_or_passport ?? "",
+    numGuests: partySize || 1,
   })
   if (!guestResult.success) {
     return { error: guestResult.error.issues.map((i) => i.message).join("; ") }
+  }
+
+  // bk02/N5: the server computes the transfer datetime from the raw HH:mm time
+  // against the correct stay date — departure transfers use check-out.
+  let transferDatetime: string | undefined
+  if (data.transfer) {
+    if (data.transfer.transferTime) {
+      const stay = data.roomSelections[0]
+      if (!stay) return { error: "Please select at least one room." }
+      const date = data.transfer.direction === "departure" ? stay.check_out : stay.check_in
+      transferDatetime = hotelLocalToUtcIso(`${date}T${data.transfer.transferTime}`)
+    } else {
+      // Legacy client that still posts transfer_datetime — kept for one deploy cycle.
+      transferDatetime = data.transfer.transfer_datetime
+    }
+    if (!transferDatetime) return { error: "Please choose a transfer time." }
   }
 
   for (const sel of data.roomSelections) {
@@ -162,8 +187,54 @@ export async function createPayHereBooking(data: {
     }
   }
 
+  // bk03/N4: re-verify requested equipment/vehicle quantities against live
+  // availability — block with an explicit message instead of silently
+  // shrinking the order (which made the charged total differ from the display).
+  const equipment = data.equipment ?? []
+  if (equipment.length) {
+    const unitIds = [...new Set(equipment.map((e) => e.unit_id))]
+    const { data: unitRows, error: unitErr } = await supabase
+      .from("equipment_units")
+      .select("id, category_id, equipment_categories(name)")
+      .in("id", unitIds)
+    if (unitErr) return { error: unitErr.message }
+    const unitById = new Map((unitRows ?? []).map((u) => [u.id, u]))
+    const groups = new Map<string, { categoryId: string; start: string; end: string; qty: number; name: string }>()
+    for (const eq of equipment) {
+      const row = unitById.get(eq.unit_id)
+      if (!row) {
+        return { error: "One of your selected equipment items is no longer available — please go back and review your extras." }
+      }
+      const key = `${row.category_id}|${eq.start_date}|${eq.end_date}`
+      const group = groups.get(key)
+      if (group) group.qty++
+      else groups.set(key, { categoryId: row.category_id, start: eq.start_date, end: eq.end_date, qty: 1, name: row.equipment_categories?.name ?? "item" })
+    }
+    for (const group of groups.values()) {
+      const { data: availableUnits, error: availErr } = await supabase.rpc("get_available_equipment_units", {
+        p_category_id: group.categoryId,
+        p_start_date: group.start,
+        p_end_date: group.end,
+      })
+      if (availErr) return { error: availErr.message }
+      const count = availableUnits?.length ?? 0
+      if (count < group.qty) {
+        return { error: `Only ${count} of ${group.qty} ${group.name} is available for the selected dates — please reduce the quantity.` }
+      }
+    }
+  }
+
   const { data: guest, error: guestErr } = await supabase
-    .from("guests").insert(data.guest).select().single()
+    .from("guests")
+    .insert({
+      full_name: data.guest.full_name,
+      email: data.guest.email,
+      phone: data.guest.phone,
+      nationality: data.guest.nationality,
+      nic_or_passport: data.guest.nic_or_passport,
+    })
+    .select()
+    .single()
   if (guestErr) return { error: guestErr.message }
 
   const groupBookingId = crypto.randomUUID()
@@ -190,7 +261,7 @@ export async function createPayHereBooking(data: {
         check_out: sel.check_out,
         status: "pending_payment",
         source: "website",
-        num_guests: sel.num_guests,
+        num_guests: sel.num_guests ?? partyFallback,
         room_total_usd: roomTotal,
         board_plan: boardPlan,
         board_total_usd: boardPricePerNight * nights,
@@ -222,14 +293,14 @@ export async function createPayHereBooking(data: {
     })
   }
 
-  if (data.transfer) {
+  if (data.transfer && transferDatetime) {
     await supabase.from("airport_transfers").insert({
       route_id: data.transfer.route_id,
       booking_id: bookingIds[0],
       guest_id: guest.id,
       direction: data.transfer.direction,
       flight_number: data.transfer.flight_number,
-      transfer_datetime: data.transfer.transfer_datetime,
+      transfer_datetime: transferDatetime,
       price_usd: await transferPrice(data.transfer.route_id),
       status: "scheduled",
     })
@@ -297,13 +368,35 @@ export async function checkIn(id: string, nicPassport: string) {
   return { data: null }
 }
 
-export async function checkOut(id: string) {
+export async function checkOut(bookingId: string) {
   const auth = await requireStaff()
   if ("error" in auth) return { error: auth.error }
   const supabase = await createServerClient()
-  const { error } = await supabase.from("bookings").update({ status: "checked_out" }).eq("id", id)
+
+  const { data: booking } = await supabase
+    .from("bookings").select("room_id").eq("id", bookingId).single()
+  if (!booking) return { error: "Booking not found" }
+
+  // ds09: check-out is the one place an invoice must exist — generate it if the
+  // stay never got one (generateInvoice just re-issues when one already exists).
+  const { data: existingInvoice } = await supabase
+    .from("invoices").select("id").eq("booking_id", bookingId).maybeSingle()
+  if (!existingInvoice) {
+    const invoiceResult = await generateInvoice(bookingId)
+    if ("error" in invoiceResult) return { error: invoiceResult.error }
+  }
+
+  const { error } = await supabase.from("bookings").update({ status: "checked_out" }).eq("id", bookingId)
   if (error) return { error: error.message }
-  revalidatePath(`/dashboard/bookings/${id}`)
+
+  // The room just changed hands — flag it for housekeeping.
+  if (booking.room_id) {
+    const { error: roomErr } = await supabase
+      .from("rooms").update({ housekeeping_status: "dirty" }).eq("id", booking.room_id)
+    if (roomErr) return { error: roomErr.message }
+  }
+
+  revalidatePath(`/dashboard/bookings/${bookingId}`)
   return { data: null }
 }
 
@@ -318,6 +411,16 @@ export async function cancelBooking(id: string) {
 
   const { error } = await supabase.from("bookings").update({ status: "cancelled" }).eq("id", id)
   if (error) return { error: error.message }
+
+  // N3: release the holds this booking owns so inventory isn't stuck on a
+  // cancelled booking. Equipment only holds stock while `pending`,
+  // transfers while `scheduled` — never touch active/completed rows.
+  const { error: eqErr } = await supabase
+    .from("equipment_bookings").update({ status: "cancelled" }).eq("booking_id", id).eq("status", "pending")
+  if (eqErr) return { error: eqErr.message }
+  const { error: trErr } = await supabase
+    .from("airport_transfers").update({ status: "cancelled" }).eq("booking_id", id).eq("status", "scheduled")
+  if (trErr) return { error: trErr.message }
 
   revalidatePath(`/dashboard/bookings/${id}`)
   return { data: null }
@@ -402,7 +505,7 @@ export async function lookupBookingByRef(refCode: string, email: string) {
   return { data: data as BookingLookupResult[] }
 }
 
-export async function recordDeposit(bookingId: string, amount: number) {
+export async function recordDeposit(bookingId: string, amount: number, method: "cash" | "bank_transfer" | "card_payhere" = "cash") {
   const auth = await requireStaff()
   if ("error" in auth) return { error: auth.error }
   if (amount <= 0) return { error: "Amount must be positive" }
@@ -411,7 +514,7 @@ export async function recordDeposit(bookingId: string, amount: number) {
   const { error } = await supabase.from("payments").insert({
     booking_id: bookingId,
     amount_usd: amount,
-    method: "cash",
+    method,
     status: "completed",
     paid_at: new Date().toISOString(),
   })
@@ -439,23 +542,25 @@ export async function lookupBookingByGroupId(groupBookingId: string, email: stri
   return { data }
 }
 
-export async function refundBookingPayment(bookingId: string) {
+export async function refundBookingPayment(paymentId: string) {
   const auth = await requireStaff()
   if ("error" in auth) return { error: auth.error }
 
   const supabase = await createServerClient()
 
+  // py01: refund the specific payment row the staff member clicked — a booking
+  // can hold several card payments, so look the payment up by its own id.
   const { data: payment, error: payErr } = await supabase
     .from("payments")
-    .select("id, method, status, payhere_payment_id, amount_usd")
-    .eq("booking_id", bookingId)
-    .eq("method", "card_payhere")
-    .eq("status", "completed")
+    .select("id, booking_id, method, status, payhere_payment_id")
+    .eq("id", paymentId)
     .single()
 
-  if (payErr || !payment) return { error: "No completed PayHere payment found for this booking" }
-  if (payment.status === "refunded") return { error: "Payment already refunded" }
-  if (!payment.payhere_payment_id) return { error: "PayHere payment ID missing — refund manually via PayHere dashboard" }
+  if (payErr || !payment) return { error: "Payment not found" }
+  if (payment.method !== "card_payhere" || payment.status !== "completed") {
+    return { error: "Only completed PayHere card payments can be refunded" }
+  }
+  if (!payment.payhere_payment_id) return { error: "This payment has no gateway reference — refund it directly in the PayHere dashboard." }
 
   const result = await refundPayherePayment(payment.payhere_payment_id, "Booking cancelled")
   if (!result.success) return { error: `PayHere refund failed: ${result.error}` }
@@ -466,6 +571,6 @@ export async function refundBookingPayment(bookingId: string) {
     .eq("id", payment.id)
   if (updateErr) return { error: updateErr.message }
 
-  revalidatePath(`/dashboard/bookings/${bookingId}`)
+  revalidatePath(`/dashboard/bookings/${payment.booking_id}`)
   return { data: null }
 }

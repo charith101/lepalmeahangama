@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { getAvailableUnits } from "@/lib/actions/equipment"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -31,18 +32,46 @@ interface EquipmentBooking {
   guest: Guest; unit: EquipmentUnit
 }
 
+const STATUS_FILTERS = [
+  { value: "active", label: "Active" },
+  { value: "pending", label: "Pending" },
+  { value: "returned", label: "Returned" },
+  { value: "all", label: "All" },
+]
+
+function friendlyError(message: string) {
+  if (message.includes("equipment_bookings_no_overlap")) return "That unit is already rented for these dates — pick another unit or adjust the dates."
+  if (message.toLowerCase().includes("row-level security")) return "You don't have permission to do that."
+  return message
+}
+
 export function EquipmentPanel({
   bookings, categories, units, guests,
 }: {
   bookings: EquipmentBooking[]; categories: EquipmentCategory[]; units: EquipmentUnit[]; guests: Guest[]
 }) {
   const supabase = createClient()
-  const [activeBookings, setActiveBookings] = useState(bookings)
+  const [rows, setRows] = useState(bookings)
+  const [statusFilter, setStatusFilter] = useState("active")
   const [open, setOpen] = useState(false)
+  const [returnTarget, setReturnTarget] = useState<EquipmentBooking | null>(null)
   const [newRental, setNewRental] = useState({ categoryId: "", unitId: "", guestId: "", startDate: "", endDate: "" })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
+  // De-duplicate guest options by email (fall back to name) — the guests table
+  // collects duplicates from walk-ins and online bookings.
+  const guestOptions = useMemo(() => {
+    const seen = new Map<string, Guest>()
+    for (const g of guests) {
+      const key = (g.email ?? g.full_name).trim().toLowerCase()
+      if (!seen.has(key)) seen.set(key, g)
+    }
+    return [...seen.values()]
+  }, [guests])
+
   const availableUnits = units.filter((u) => u.category.id === newRental.categoryId)
+  const activeCount = rows.filter((b) => b.status === "active").length
+  const filteredRows = statusFilter === "all" ? rows : rows.filter((b) => b.status === statusFilter)
 
   function updateField(field: string, value: string) {
     setNewRental((prev) => ({ ...prev, [field]: value }))
@@ -63,6 +92,13 @@ export function EquipmentPanel({
     }
     const unit = units.find((u) => u.id === result.data.unitId)
     if (!unit) return
+    // op08/N9: verify the chosen unit is actually free for these dates before inserting.
+    const avail = await getAvailableUnits(result.data.categoryId, result.data.startDate, result.data.endDate)
+    if (avail.error) { toast.error(friendlyError(avail.error)); return }
+    if (!avail.data?.some((u: { id: string }) => u.id === result.data.unitId)) {
+      toast.error(`${unit.unit_label} is already rented for these dates — pick another unit.`)
+      return
+    }
     const days = Math.max(1, Math.round((new Date(result.data.endDate).getTime() - new Date(result.data.startDate).getTime()) / (1000 * 60 * 60 * 24)))
     const price = days * unit.category.price_per_day_usd
 
@@ -75,25 +111,47 @@ export function EquipmentPanel({
       status: "active",
     }).select("*, guest:guests(*), unit:equipment_units(*, category:equipment_categories(*))").single()
 
-    if (error) { toast.error(error.message); return }
-    setActiveBookings((prev) => [data, ...prev])
+    if (error) { toast.error(friendlyError(error.message)); return }
+    setRows((prev) => [data, ...prev])
     setOpen(false)
     setNewRental({ categoryId: "", unitId: "", guestId: "", startDate: "", endDate: "" })
     setFieldErrors({})
     toast.success("Rental created")
   }
 
-  async function handleReturn(id: string) {
+  async function handleReturn() {
+    if (!returnTarget) return
+    const { id, unit } = returnTarget
     const { error } = await supabase.from("equipment_bookings").update({ status: "returned" }).eq("id", id)
-    if (error) { toast.error(error.message); return }
-    setActiveBookings((prev) => prev.filter((b) => b.id !== id))
-    toast.success("Equipment returned")
+    if (error) { toast.error(friendlyError(error.message)); return }
+    setReturnTarget(null)
+    setRows((prev) => prev.map((b) => (b.id === id ? { ...b, status: "returned" } : b)))
+    toast.success(`${unit?.unit_label} marked as returned`, {
+      action: { label: "Undo", onClick: () => { void undoReturn(id) } },
+    })
+  }
+
+  async function undoReturn(id: string) {
+    const { error } = await supabase.from("equipment_bookings").update({ status: "active" }).eq("id", id)
+    if (error) { toast.error(friendlyError(error.message)); return }
+    setRows((prev) => prev.map((b) => (b.id === id ? { ...b, status: "active" } : b)))
+    toast.success("Return undone")
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{activeBookings.length} active rental(s)</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">{activeCount} active rental(s)</p>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "active")} items={STATUS_FILTERS}>
+            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTERS.map((f) => (
+                <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger render={<Button><PlusIcon /> New Rental</Button>} />
           <DialogContent>
@@ -127,10 +185,10 @@ export function EquipmentPanel({
               )}
               <div className="space-y-2">
                 <Label>Guest</Label>
-                <Select value={newRental.guestId} onValueChange={(v) => updateField("guestId", v ?? "")} items={guests.map((g) => ({ value: g.id, label: `${g.full_name}${g.email ? ` (${g.email})` : ""}` }))}>
+                <Select value={newRental.guestId} onValueChange={(v) => updateField("guestId", v ?? "")} items={guestOptions.map((g) => ({ value: g.id, label: `${g.full_name}${g.email ? ` (${g.email})` : ""}` }))}>
                   <SelectTrigger className="w-full" data-invalid={!!fieldErrors.guestId || undefined}><SelectValue placeholder="Search guest" /></SelectTrigger>
                   <SelectContent>
-                    {guests.map((g) => (
+                    {guestOptions.map((g) => (
                       <SelectItem key={g.id} value={g.id}>{g.full_name} {g.email ? `(${g.email})` : ""}</SelectItem>
                     ))}
                   </SelectContent>
@@ -156,7 +214,7 @@ export function EquipmentPanel({
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Active Rentals</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Rentals</CardTitle></CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -170,7 +228,7 @@ export function EquipmentPanel({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeBookings.map((b) => (
+              {filteredRows.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell className="font-medium">{b.guest?.full_name}</TableCell>
                   <TableCell>{b.unit?.unit_label}</TableCell>
@@ -179,14 +237,14 @@ export function EquipmentPanel({
                   <TableCell><Badge variant={b.status === "active" ? "default" : "secondary"}>{b.status}</Badge></TableCell>
                   <TableCell>
                     {b.status === "active" && (
-                      <Button variant="outline" size="sm" onClick={() => handleReturn(b.id)}>
+                      <Button variant="outline" size="sm" onClick={() => setReturnTarget(b)}>
                         <RotateCcwIcon /> Return
                       </Button>
                     )}
                   </TableCell>
                 </TableRow>
               ))}
-              {activeBookings.length === 0 && (
+              {filteredRows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No rentals.</TableCell>
                 </TableRow>
@@ -195,6 +253,17 @@ export function EquipmentPanel({
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!returnTarget} onOpenChange={(o) => { if (!o) setReturnTarget(null) }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Mark {returnTarget?.unit?.unit_label} as returned?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">{returnTarget?.guest?.full_name} — this frees it for re-booking.</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setReturnTarget(null)}>Cancel</Button>
+            <Button onClick={handleReturn}>Mark returned</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

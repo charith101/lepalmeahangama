@@ -16,8 +16,8 @@ export function RestaurantSection() {
             <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed mb-6">
               Our restaurant celebrates the vibrant flavors of Sri Lankan cuisine,
               from freshly caught seafood to fragrant curries and tropical fruits.
-              Dine overlooking the ocean as the sun paints the sky in shades of
-              amber and rose.
+              Dine in the garden as the sun paints the sky in shades of amber and
+              rose.
             </p>
             <Link
               href="/dine"

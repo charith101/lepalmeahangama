@@ -18,12 +18,12 @@ export function WelcomeSection() {
         <AnimatedSection delay={150}>
           <div className="flex flex-col justify-end">
             <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed mb-6">
-              Just 1.4 miles from Kabalana Beach and 5 miles from Koggala
-              Airport, Le Palme Ahangama offers comfortable family rooms with
-              private bathrooms, balconies, and garden views. Soak up the sun on
-              our terrace, gather in the garden or shared lounge, gather around
-              the outdoor fireplace in the evening, and let the friendly host
-              take care of the rest.
+              Just 800 m from Ahangama Beach and 5 km from Koggala Airport, Le
+              Palme Ahangama offers comfortable family rooms with private
+              bathrooms, balconies, and garden views. Soak up the sun on our
+              terrace, gather in the garden or shared lounge, gather around the
+              outdoor fireplace in the evening, and let the friendly host take
+              care of the rest.
             </p>
             <Link
               href="/about"

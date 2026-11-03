@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { TreePalm } from "lucide-react"
+import { motion, MotionConfig, type Variants } from "motion/react"
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 
 const bookingEnabled = process.env.NEXT_PUBLIC_BOOKING_ENABLED !== "false"
@@ -15,6 +16,39 @@ const navLinks = [
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
 ]
+
+const MotionLink = motion.create(Link)
+
+// The bar fades in as a unit, then each control arrives in sequence.
+const navbarStagger: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } },
+}
+
+const navbarItem: Variants = {
+  hidden: { opacity: 0, y: -6 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+}
+
+const brandStagger: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.1 } },
+}
+
+const brandLogo: Variants = {
+  hidden: { opacity: 0, scale: 0.94, filter: "blur(4px)" },
+  show: {
+    opacity: 1,
+    scale: 1,
+    filter: "blur(0px)",
+    transition: { duration: 0.7, ease: "easeOut" },
+  },
+}
+
+const brandName: Variants = {
+  hidden: { opacity: 0, y: 6 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+}
 
 export function PublicNavbar() {
   const [open, setOpen] = useState(false)
@@ -58,8 +92,9 @@ export function PublicNavbar() {
   if (isDashboard) return null
 
   return (
-    <>
-      <nav
+    <MotionConfig reducedMotion="user">
+      <>
+        <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
           scrolledPast
             ? "bg-white dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800"
@@ -68,41 +103,63 @@ export function PublicNavbar() {
       >
         <div className="flex items-center justify-between h-18 px-6 sm:px-12 max-w-8xl mx-auto">
           <Link href={isDashboard ? "/dashboard" : "/"} className="shrink-0">
-            <span
-              className={`flex items-center gap-2 text-xl font-serif font-normal tracking-wide ${
+            <motion.span
+              initial="hidden"
+              animate="show"
+              variants={brandStagger}
+              className={`flex items-center gap-2.5 text-xl font-serif font-normal tracking-wide ${
                 scrolledPast ? "text-stone-900 dark:text-stone-100" : "text-white"
               }`}
             >
-              <TreePalm className="size-6" />
-              Le Palme
-            </span>
+              <motion.span variants={brandLogo} className="inline-flex">
+                <Image
+                  src="/images/IMG_1457.png"
+                  alt="Le Palme logo"
+                  width={378}
+                  height={334}
+                  priority
+                  className={`h-10 w-auto transition-[filter] duration-500 ${
+                    scrolledPast ? "brightness-0 dark:brightness-100" : ""
+                  }`}
+                />
+              </motion.span>
+              <motion.span variants={brandName}>Le Palme</motion.span>
+            </motion.span>
           </Link>
 
           <div className="flex items-center gap-10">
             {!isDashboard && (
-              <div className="hidden lg:flex items-center gap-10">
+              <motion.div
+                initial="hidden"
+                animate="show"
+                variants={navbarStagger}
+                className="hidden lg:flex items-center gap-10"
+              >
                 {navLinks.map((link) => (
-                    <Link
+                    <MotionLink
                       key={link.label}
                       href={link.href}
+                      variants={navbarItem}
                       className={`relative text-xs font-sans font-medium uppercase tracking-[0.15em] transition-colors duration-200 hover:opacity-70 after:absolute after:bottom-[-3px] after:left-0 after:h-px after:w-full after:bg-current after:origin-left after:scale-x-0 after:transition-transform after:duration-200 hover:after:scale-x-100 ${
                         scrolledPast ? "text-stone-700 dark:text-stone-200" : "text-white/90"
                       }`}
                     >
                       {link.label}
-                    </Link>
+                    </MotionLink>
                   ))}
-                  <Link
+                  <MotionLink
                     href="/booking/lookup"
+                    variants={navbarItem}
                     className={`relative text-xs font-sans font-medium uppercase tracking-[0.15em] transition-colors duration-200 hover:opacity-70 after:absolute after:bottom-[-3px] after:left-0 after:h-px after:w-full after:bg-current after:origin-left after:scale-x-0 after:transition-transform after:duration-200 hover:after:scale-x-100 ${
                       scrolledPast ? "text-stone-500 dark:text-stone-400" : "text-white/70"
                     }`}
                   >
                     My Bookings
-                  </Link>
+                  </MotionLink>
                   {bookingEnabled && (
-                    <Link
+                    <MotionLink
                       href="/booking"
+                      variants={navbarItem}
                       className={`px-5 py-2 text-xs font-sans font-medium uppercase tracking-[0.15em] transition-colors duration-200 ${
                         scrolledPast
                           ? "bg-stone-900 dark:bg-stone-800 text-white hover:bg-stone-800 dark:hover:bg-stone-700"
@@ -110,20 +167,27 @@ export function PublicNavbar() {
                       }`}
                     >
                       Book Now
-                    </Link>
+                    </MotionLink>
                   )}
-                <AnimatedThemeToggler
-                  className={`flex size-8 items-center justify-center transition-colors ${
-                    scrolledPast
-                      ? "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                />
-              </div>
+                <motion.div variants={navbarItem}>
+                  <AnimatedThemeToggler
+                    className={`flex size-8 items-center justify-center transition-colors ${
+                      scrolledPast
+                        ? "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  />
+                </motion.div>
+              </motion.div>
             )}
 
             {!isDashboard && (
-              <div className="flex items-center gap-2 lg:hidden">
+              <motion.div
+                initial="hidden"
+                animate="show"
+                variants={navbarItem}
+                className="flex items-center gap-2 lg:hidden"
+              >
                 <AnimatedThemeToggler
                   className={`flex size-8 items-center justify-center transition-colors ${
                     scrolledPast
@@ -158,7 +222,7 @@ export function PublicNavbar() {
                     />
                   </div>
                 </button>
-              </div>
+              </motion.div>
             )}
           </div>
         </div>
@@ -252,6 +316,7 @@ export function PublicNavbar() {
           )}
         </div>
       </div>
-    </>
+      </>
+    </MotionConfig>
   )
 }

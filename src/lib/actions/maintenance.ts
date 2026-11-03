@@ -2,7 +2,7 @@
 
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
-import { requireStaff } from "@/lib/auth"
+import { requireAnyStaff, requireStaff } from "@/lib/auth"
 
 export async function reportMaintenanceIssue(data: {
   roomId: string
@@ -11,7 +11,7 @@ export async function reportMaintenanceIssue(data: {
 }) {
   if (!data.description?.trim()) return { error: "Description is required" }
 
-  const auth = await requireStaff()
+  const auth = await requireAnyStaff()
   if ("error" in auth) return { error: auth.error }
 
   const supabase = await createServerClient()
@@ -53,7 +53,11 @@ export async function updateMaintenanceStatus(id: string, status: string) {
     .from("maintenance_requests")
     .update({
       status,
-      ...(status === "resolved" || status === "closed" ? { resolved_at: new Date().toISOString() } : {}),
+      // Terminal states stamp the resolver; reopening clears the resolution.
+      ...(status === "resolved" || status === "closed"
+        ? { resolved_at: new Date().toISOString(), resolved_by_staff_id: auth.user.id }
+        : {}),
+      ...(status === "open" ? { resolved_at: null, resolved_by_staff_id: null } : {}),
     })
     .eq("id", id)
   if (error) return { error: error.message }

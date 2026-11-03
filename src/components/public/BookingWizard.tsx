@@ -30,6 +30,7 @@ type BookingWizardProps = {
   defaultCategoryId?: string
   defaultCheckIn?: string
   defaultCheckOut?: string
+  defaultGuests?: string
 }
 
 type WizardData = {
@@ -50,7 +51,14 @@ const defaultExtras: ExtrasData = {
 }
 
 const defaultGuest: GuestData = {
-  fullName: "", email: "", phone: "", nationality: "", nic_passport: "",
+  fullName: "", email: "", phone: "", nationality: "", nic_passport: "", numGuests: 1,
+}
+
+// bk01/bk05: hero puts `guests` (1–6) in the URL — use it to pre-fill party size
+function parseGuestsParam(v?: string): number | undefined {
+  const n = Number.parseInt(v ?? "", 10)
+  if (!Number.isFinite(n) || n < 1) return undefined
+  return Math.min(20, n)
 }
 
 const steps = [
@@ -71,7 +79,8 @@ function extrasPricing(p: PricingData): ExtrasPricing {
   }
 }
 
-export function BookingWizard({ categories, pricing, defaultCategoryId, defaultCheckIn, defaultCheckOut }: BookingWizardProps) {
+export function BookingWizard({ categories, pricing, defaultCategoryId, defaultCheckIn, defaultCheckOut, defaultGuests }: BookingWizardProps) {
+  const urlGuests = parseGuestsParam(defaultGuests)
   const [step, setStep] = useState(() => {
     if (typeof window !== "undefined") {
       try {
@@ -91,7 +100,7 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
       roomSelections: [],
       boardPlan: "room_only",
       extras: defaultExtras,
-      guest: defaultGuest,
+      guest: { ...defaultGuest, numGuests: urlGuests ?? 1 },
     }
     if (typeof window !== "undefined") {
       try {
@@ -103,7 +112,8 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
               ...fallback,
               ...parsed.data,
               extras: { ...defaultExtras, ...(parsed.data.extras ?? {}), items: parsed.data.extras?.items ?? [] },
-              guest: { ...defaultGuest, ...parsed.data.guest },
+              // bk01: the hero's `guests` param always wins over stale session data
+              guest: { ...defaultGuest, ...parsed.data.guest, ...(urlGuests !== undefined ? { numGuests: urlGuests } : {}) },
             }
           }
         }
@@ -181,6 +191,9 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
 
   const showPriceBar = step > 1 || (step === 1 && data.roomSelections.length > 0)
   const subtotal = roomTotal + boardTotal + equipmentTotal + vehiclesTotal + transferTotal
+
+  // bk05: party size is capped at the summed max occupancy of the selected rooms
+  const maxGuests = data.roomSelections.reduce((sum, sel) => sum + sel.maxOccupancy * sel.quantity, 0)
 
   return (
     <div className="space-y-8">
@@ -297,6 +310,7 @@ export function BookingWizard({ categories, pricing, defaultCategoryId, defaultC
       {step === 4 && (
         <GuestDetailsStep
           initialData={data.guest}
+          maxGuests={maxGuests}
           onNext={(guest) => {
             updateData({ guest })
             setStep(5)

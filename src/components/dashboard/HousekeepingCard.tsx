@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { createClient } from "@/lib/supabase/client"
 import { updateRoomHousekeepingStatus } from "@/lib/actions/rooms"
+import { reportMaintenanceIssue } from "@/lib/actions/maintenance"
 
 const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   dirty: "destructive",
@@ -26,9 +26,10 @@ const NEXT_STATUS: Record<string, string | null> = {
   ready: null,
 }
 
-export function HousekeepingCard({ roomId, roomNumber, categoryName, status: initialStatus }: { roomId: string; roomNumber: string; categoryName: string; status: string }) {
+type OpenIssue = { id: string; description: string; priority: string }
+
+export function HousekeepingCard({ roomId, roomNumber, categoryName, status: initialStatus, issues = [] }: { roomId: string; roomNumber: string; categoryName: string; status: string; issues?: OpenIssue[] }) {
   const router = useRouter()
-  const supabase = createClient()
   const [status, setStatus] = useState(initialStatus)
   const [updating, setUpdating] = useState(false)
   const [showReportDialog, setShowReportDialog] = useState(false)
@@ -55,17 +56,17 @@ export function HousekeepingCard({ roomId, roomNumber, categoryName, status: ini
     if (!reportDescription.trim()) { toast.error("Describe the issue"); return }
     setReportSubmitting(true)
     try {
-      const { error } = await supabase.from("maintenance_requests").insert({
-        room_id: roomId,
+      const { error } = await reportMaintenanceIssue({
+        roomId,
         description: reportDescription.trim(),
-        priority: reportPriority,
-        status: "open",
+        priority: reportPriority as "low" | "normal" | "high" | "urgent",
       })
-      if (error) throw error
+      if (error) throw new Error(error)
       toast.success("Maintenance issue reported")
       setShowReportDialog(false)
       setReportDescription("")
       setReportPriority("normal")
+      router.refresh()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to report")
     } finally {
@@ -88,6 +89,11 @@ export function HousekeepingCard({ roomId, roomNumber, categoryName, status: ini
           <Button size="xs" variant={status === "cleaning" ? "default" : "outline"} onClick={() => handleUpdate("cleaning")} disabled={updating || (next !== "cleaning" && status !== "cleaning")}>Cleaning</Button>
           <Button size="xs" variant={status === "ready" ? "default" : "outline"} onClick={() => handleUpdate("ready")} disabled={updating || (next !== "ready" && status !== "ready")}>Ready</Button>
         </div>
+        {issues.length > 0 && (
+          <Badge variant={issues.some((i) => i.priority === "urgent" || i.priority === "high") ? "destructive" : "secondary"}>
+            ⚠ {issues.length} open {issues.length === 1 ? "issue" : "issues"}
+          </Badge>
+        )}
         <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
           <DialogTrigger render={<Button size="xs" variant="outline" className="w-full gap-1" />}>
             <Wrench className="size-3" />

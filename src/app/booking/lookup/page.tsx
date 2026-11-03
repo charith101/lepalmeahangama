@@ -4,6 +4,7 @@ import { LookupForm } from "./lookup-form"
 export const metadata: Metadata = {
   title: "View My Booking",
   description: "Enter your booking reference code and email to view your reservation details at Le Palme Ahangama.",
+  robots: { index: false, follow: true },
 }
 
 export default function BookingLookupPage() {

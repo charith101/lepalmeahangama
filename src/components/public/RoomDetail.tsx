@@ -9,9 +9,11 @@ type RoomCategory = {
   max_occupancy: number
   description: string | null
   image_url: string | null
+  /** "Check-in from 2:00 PM · Check-out by 11:00" (from settings; ad08). */
+  stayTimes?: string
 }
 
-export function RoomDetail({ id, name, base_price_usd, max_occupancy, description, image_url }: RoomCategory) {
+export function RoomDetail({ id, name, base_price_usd, max_occupancy, description, image_url, stayTimes }: RoomCategory) {
   const today = new Date()
   const checkIn = new Date(today)
   checkIn.setDate(checkIn.getDate() + 1)
@@ -80,6 +82,9 @@ export function RoomDetail({ id, name, base_price_usd, max_occupancy, descriptio
                   <span className="text-stone-500 dark:text-stone-400">Max occupancy</span>
                   <span className="font-medium text-stone-900 dark:text-stone-100">{max_occupancy} guests</span>
                 </div>
+                {stayTimes && (
+                  <div className="pt-1 text-stone-500 dark:text-stone-400">{stayTimes}</div>
+                )}
               </div>
 
               <Link href={bookingUrl}>

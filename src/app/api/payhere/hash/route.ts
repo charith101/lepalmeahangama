@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { generateHash } from "@/lib/payhere"
+import { generateHash, groupIdFromOrderId } from "@/lib/payhere"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { computeBookingTotal } from "@/lib/booking-pricing"
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,12 +16,16 @@ export async function POST(request: NextRequest) {
 
     // order_id = "BOOK-<group_booking_id>". We only sign the server-computed
     // total for an existing, unpaid booking — never a client-supplied amount.
-    if (!order_id.startsWith("BOOK-")) {
+    const groupBookingId = groupIdFromOrderId(order_id)
+    if (!groupBookingId) {
       return NextResponse.json({ error: "Invalid order reference" }, { status: 400 })
     }
-    const groupBookingId = order_id.slice("BOOK-".length)
-    if (!UUID_RE.test(groupBookingId)) {
-      return NextResponse.json({ error: "Invalid order reference" }, { status: 400 })
+
+    const merchantId = process.env.NEXT_PUBLIC_PAYHERE_MERCHANT_ID || ""
+    const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET || ""
+    if (!merchantId || !merchantSecret) {
+      console.error("[payhere/hash] PayHere credentials are not configured")
+      return NextResponse.json({ error: "Payments are not configured" }, { status: 500 })
     }
 
     const supabase = createAdminClient()
@@ -42,8 +44,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: totalResult.error }, { status: 500 })
     }
 
-    const merchantId = process.env.NEXT_PUBLIC_PAYHERE_MERCHANT_ID || ""
-    const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET || ""
     const amount = totalResult.total.toFixed(2)
     const hash = generateHash(merchantId, order_id, amount, currency, merchantSecret)
 

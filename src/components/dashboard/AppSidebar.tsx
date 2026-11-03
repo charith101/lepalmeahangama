@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
@@ -121,7 +122,14 @@ export function AppSidebar({
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
-      <div className="flex h-14 items-center border-b px-4 font-heading text-base font-medium shrink-0">
+      <div className="flex h-14 items-center gap-2 border-b px-4 font-heading text-base font-medium shrink-0">
+        <Image
+          src="/images/IMG_1457.png"
+          alt="Le Palme logo"
+          width={378}
+          height={334}
+          className="h-8 w-auto"
+        />
         Le Palme
       </div>
       <div className="flex-1 overflow-y-auto">

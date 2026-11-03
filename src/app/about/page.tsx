@@ -1,17 +1,18 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { pageMetadata } from "@/lib/seo"
 import {
   HOTEL_ADDRESS_FULL,
-  HOTEL_DESCRIPTION,
   HOTEL_MAP_EMBED_URL,
   HOTEL_MAP_LINK,
   HOTEL_NAME,
 } from "@/lib/constants"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "About Us",
-  description: `${HOTEL_NAME} — a charming boutique property in Ahangama, Sri Lanka. Family rooms with garden views, sun terrace, and a friendly host near Kabalana Beach.`,
-}
+  description: `${HOTEL_NAME} — a boutique property in Ahangama, Sri Lanka. Family rooms with garden views, a sun terrace, and a friendly host near Ahangama Beach.`,
+  path: "/about",
+})
 
 export default function AboutPage() {
   return (
@@ -104,10 +105,10 @@ export default function AboutPage() {
                 facilities to improve the quality and joy of your stay.
               </p>
               <p>
-                We&apos;re located just 1.4 miles from Kabalana Beach and 5 miles
-                from Koggala Airport, giving you easy access to the best of the
-                south coast. Guests appreciate the quietness of the area and the
-                warm, friendly host — many return year after year.
+                We&apos;re located just 800 m from Ahangama Beach and 5 km from
+                Koggala Airport, giving you easy access to the best of the south
+                coast. Guests appreciate the quietness of the area and the warm,
+                friendly host — many return year after year.
               </p>
               <p>
                 Every morning starts with a full English or Irish breakfast,

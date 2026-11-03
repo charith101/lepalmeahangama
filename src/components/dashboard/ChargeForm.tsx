@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency } from "@/lib/utils"
 import { chargeSchema } from "@/lib/validations"
-import { postCharge } from "@/lib/actions/billing"
+import { postCharge, updateCharge } from "@/lib/actions/billing"
 import type { Database } from "@/lib/supabase/database.types"
 
 const CHARGE_CATEGORIES = ["meal", "late_checkout_fee", "transport", "misc"] as const
@@ -23,11 +23,17 @@ type Charge = {
   created_at: string
 }
 
-export function ChargeForm({ bookingId, onSuccess, onCancel }: { bookingId: string; onSuccess: (charge: Charge) => void; onCancel: () => void }) {
-  const [description, setDescription] = useState("")
-  const [category, setCategory] = useState<string | null>("misc")
-  const [quantity, setQuantity] = useState("1")
-  const [unitPrice, setUnitPrice] = useState("")
+export function ChargeForm({ bookingId, initial, onSuccess, onUpdated, onCancel }: {
+  bookingId: string
+  initial?: Charge | null
+  onSuccess: (charge: Charge) => void
+  onUpdated?: (charge: Charge) => void
+  onCancel: () => void
+}) {
+  const [description, setDescription] = useState(initial?.description ?? "")
+  const [category, setCategory] = useState<string | null>(initial?.category ?? "misc")
+  const [quantity, setQuantity] = useState(String(initial?.quantity ?? 1))
+  const [unitPrice, setUnitPrice] = useState(initial ? String(initial.unit_price_usd) : "")
   const [submitting, setSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
@@ -51,6 +57,29 @@ export function ChargeForm({ bookingId, onSuccess, onCancel }: { bookingId: stri
     }
     setSubmitting(true)
     try {
+      if (initial) {
+        // updateCharge data is validated by chargeSchema (unitPrice) and mirrors
+        // postCharge's shape (unit_price_usd) — include both keys so either works.
+        const payload = {
+          description: description.trim(),
+          category: result.data.category,
+          quantity: result.data.quantity,
+          unit_price_usd: result.data.unitPrice,
+          unitPrice: result.data.unitPrice,
+        }
+        const { error } = await updateCharge(initial.id, payload)
+        if (error) throw new Error(error)
+        toast.success("Charge updated")
+        onUpdated?.({
+          ...initial,
+          description: description.trim(),
+          category: result.data.category,
+          quantity: result.data.quantity,
+          unit_price_usd: result.data.unitPrice,
+          line_total_usd: lineTotal,
+        })
+        return
+      }
       const { error } = await postCharge(bookingId, {
         description: description.trim(),
         category: result.data.category as Database["public"]["Enums"]["charge_category"],
@@ -77,7 +106,7 @@ export function ChargeForm({ bookingId, onSuccess, onCancel }: { bookingId: stri
 
   return (
     <div className="space-y-3 rounded-lg border p-4">
-      <p className="text-sm font-medium">New Charge</p>
+      <p className="text-sm font-medium">{initial ? "Edit Charge" : "New Charge"}</p>
       <div className="space-y-2">
         <Label>Description</Label>
         <Input value={description} onChange={(e) => { setDescription(e.target.value); setFieldErrors((p) => ({ ...p, description: "" })) }} placeholder="e.g. Dinner" aria-invalid={!!fieldErrors.description} />

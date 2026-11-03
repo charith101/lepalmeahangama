@@ -22,6 +22,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.21.0",
+    "motion": "^14.9.0",
     "next": "16.2.9",
     "next-themes": "^0.4.6",
     "react": "19.2.4",
@@ -36,6 +37,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@drawio/mcp": "^1.10.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^7.0.0",

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -51,20 +52,26 @@ export function RoomStatusBoard({ rooms }: { rooms: RoomStatus[] }) {
         {rooms.map((r) => {
           const info = getStatusInfo(r)
           return (
-            <Card key={r.id} className={cn(r.operational_status === "retired" && "opacity-50")}>
-              <CardContent className="p-3 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-sm">{r.room_number}</span>
-                  <Badge variant={roomBadgeVariant[info.label] ?? "outline"} className="text-[11px] px-1.5 py-0 h-5 font-normal">
-                    {info.label}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">{r.room_categories.name}</p>
-                {r.current_booking?.guest_name && (
-                  <p className="text-xs truncate text-muted-foreground">{r.current_booking.guest_name}</p>
-                )}
-              </CardContent>
-            </Card>
+            <Link
+              key={r.id}
+              href={r.current_booking ? `/dashboard/bookings/${r.current_booking.id}` : "/dashboard/calendar"}
+              className="block rounded-xl cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <Card className={cn(r.operational_status === "retired" && "opacity-50", "transition-opacity hover:opacity-80")}>
+                <CardContent className="p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm">{r.room_number}</span>
+                    <Badge variant={roomBadgeVariant[info.label] ?? "outline"} className="text-[11px] px-1.5 py-0 h-5 font-normal">
+                      {info.label}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{r.room_categories.name}</p>
+                  {r.current_booking?.guest_name && (
+                    <p className="text-xs truncate text-muted-foreground">{r.current_booking.guest_name}</p>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
           )
         })}
       </div>

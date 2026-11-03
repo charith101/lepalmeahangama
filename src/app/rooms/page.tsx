@@ -1,15 +1,13 @@
 import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { RoomCategoryCard } from "@/components/public/RoomCategoryCard"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Rooms & Rates",
   description: "Family rooms at Le Palme Ahangama with private bathrooms, balconies, and garden views — plus air-conditioning, a work desk, and free WiFi.",
-  openGraph: {
-    title: "Rooms & Rates — Le Palme Ahangama",
-    description: "Family rooms with private bathrooms, balconies, garden views, air-conditioning, and free WiFi.",
-  },
-}
+  path: "/rooms",
+})
 
 export default async function RoomsPage() {
   const supabase = await createClient()

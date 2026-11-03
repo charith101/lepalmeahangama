@@ -18,9 +18,12 @@ type Note = {
 
 export function ShiftNotes({ notes: initialNotes }: { notes: Note[] }) {
   const router = useRouter()
-  const [notes, setNotes] = useState(initialNotes)
   const [content, setContent] = useState("")
   const [posting, setPosting] = useState(false)
+
+  // The list comes straight from the server component; `router.refresh()` after a
+  // mutation re-renders it with fresh notes, so no local copy (and no sync effect).
+  const notes = initialNotes
 
   async function handlePost() {
     if (!content.trim()) return
@@ -40,8 +43,8 @@ export function ShiftNotes({ notes: initialNotes }: { notes: Note[] }) {
     const result = await deleteShiftNote(id)
     if (result.error) toast.error(result.error)
     else {
-      setNotes((prev) => prev.filter((n) => n.id !== id))
       toast.success("Note deleted")
+      router.refresh()
     }
   }
 
@@ -68,6 +71,7 @@ export function ShiftNotes({ notes: initialNotes }: { notes: Note[] }) {
               </div>
               <button
                 onClick={() => handleDelete(note.id)}
+                aria-label="Delete shift note"
                 className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
               >
                 <X className="size-3" />

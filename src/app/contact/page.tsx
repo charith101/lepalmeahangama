@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Mail, Phone, MapPin } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
@@ -14,11 +15,23 @@ import {
 } from "@/lib/constants"
 
 export default function ContactPage() {
+  return (
+    <Suspense fallback={null}>
+      <ContactContent />
+    </Suspense>
+  )
+}
+
+function ContactContent() {
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  const experience = searchParams.get("experience")
+  const subject = searchParams.get("subject")
+  const context = experience || subject
   const [loading, setLoading] = useState(false)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
-  const [message, setMessage] = useState("")
+  const [message, setMessage] = useState(context ? `Re: ${context}\n\n` : "")
   const [sent, setSent] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -28,10 +41,11 @@ export default function ContactPage() {
       return
     }
     setLoading(true)
+    const storedMessage = context ? `[${context}] ${message.trim()}` : message.trim()
     const { error } = await supabase.from("contact_messages").insert({
       name: name.trim(),
       email: email.trim(),
-      message: message.trim(),
+      message: storedMessage,
     })
     setLoading(false)
     if (error) {
@@ -130,6 +144,11 @@ export default function ContactPage() {
             </div>
 
             <div>
+              {context && (
+                <p className="text-xs font-sans font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-4">
+                  {experience ? `Enquiring about: ${experience}` : `Subject: ${subject}`}
+                </p>
+              )}
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label htmlFor="name" className="block text-xs font-sans font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-1.5">

@@ -1,9 +1,12 @@
 import type { Metadata } from "next"
+import { HOTEL_EMAIL } from "@/lib/constants"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
   description: "Read the privacy policy of Le Palme Ahangama, a boutique hotel in Ahangama, Sri Lanka.",
-}
+  path: "/privacy-policy",
+})
 
 export default function PrivacyPolicyPage() {
   return (
@@ -148,10 +151,10 @@ export default function PrivacyPolicyPage() {
                 If you have any questions, concerns, or requests regarding this Privacy
                 Policy or the handling of your personal information, please contact us at{" "}
                 <a
-                  href="mailto:lepalmeahangama@protonmail.com"
+                  href={`mailto:${HOTEL_EMAIL}`}
                   className="text-stone-900 dark:text-stone-100 underline underline-offset-4 hover:opacity-70 transition-opacity"
                 >
-                  lepalmeahangama@protonmail.com
+                  {HOTEL_EMAIL}
                 </a>
                 .
               </p>

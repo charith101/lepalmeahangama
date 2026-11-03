@@ -58,7 +58,7 @@ export async function sendBookingConfirmation(bookingId: string) {
   const total = "error" in totalResult ? roomSubtotal + boardTotal : totalResult.total
 
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: "Le Palme Ahangama <noreply@info.lepalmeahangama.com>",
       to: [g.email],
       subject: "Booking Confirmed — Le Palme Ahangama",
@@ -79,8 +79,52 @@ export async function sendBookingConfirmation(bookingId: string) {
   <p style="margin-top:32px;color:#999;font-size:12px">${HOTEL_NAME} — ${HOTEL_ADDRESS_FULL} · ${HOTEL_PHONE_DISPLAY} · <a href="mailto:${HOTEL_EMAIL}" style="color:#999">${HOTEL_EMAIL}</a></p>
   </div>`,
     })
+    if (error) throw new Error(error.message)
     console.log("[email] Confirmation sent", { bookingId, groupBookingId, to: g.email })
   } catch (err) {
     console.error("[email] Failed to send confirmation email", { bookingId, groupBookingId, to: g.email, error: err instanceof Error ? err.message : String(err) })
+  }
+}
+
+// bk12: tells the guest their PayHere attempt didn't go through and where they
+// can find the booking again. Never throws — the payment webhook must answer.
+export async function sendPaymentFailedEmail(bookingId: string) {
+  try {
+    const supabase = createAdminClient()
+
+    const { data: booking, error: queryErr } = await supabase
+      .from("bookings")
+      .select("id, group_booking_id, guests(full_name, email)")
+      .eq("id", bookingId)
+      .single()
+
+    const g = booking?.guests as unknown as { full_name: string; email: string } | null
+    if (queryErr || !booking || !g?.email) {
+      console.warn("[email] No guest found for payment-failed email", { bookingId, error: queryErr?.message })
+      return
+    }
+
+    const ref = (booking.group_booking_id ?? bookingId).slice(0, 8).toUpperCase()
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ""
+
+    const { error } = await resend.emails.send({
+      from: "Le Palme Ahangama <noreply@info.lepalmeahangama.com>",
+      to: [g.email],
+      subject: "Payment unsuccessful — Le Palme Ahangama",
+      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+  <h1 style="font-size:24px;font-weight:300;margin-bottom:24px">Payment unsuccessful</h1>
+  <p style="color:#666;margin-bottom:24px">Dear ${g.full_name}, your payment for a stay at Le Palme Ahangama could not be completed. Your booking is still held for you but is not yet confirmed.</p>
+  <table style="width:100%;border-collapse:collapse">
+  <tr><td style="padding:8px 0;color:#666">Reference</td><td style="padding:8px 0;font-family:monospace">${ref}</td></tr>
+  </table>
+  <a href="${appUrl}/booking/lookup" style="display:inline-block;margin-top:24px;padding:10px 24px;background:#111;color:#fff;text-decoration:none;border-radius:999px;font-size:14px">Find my booking</a>
+  <p style="margin-top:24px;color:#666;font-size:14px">If you believe this was a mistake, or you would like to complete your booking, please contact us at <a href="mailto:${HOTEL_EMAIL}" style="color:#666">${HOTEL_EMAIL}</a> or call ${HOTEL_PHONE_DISPLAY}.</p>
+  <p style="margin-top:32px;color:#999;font-size:12px">${HOTEL_NAME} — ${HOTEL_ADDRESS_FULL} · <a href="mailto:${HOTEL_EMAIL}" style="color:#999">${HOTEL_EMAIL}</a></p>
+  </div>`,
+    })
+    if (error) throw new Error(error.message)
+    console.log("[email] Payment-failed sent", { bookingId, to: g.email })
+  } catch (err) {
+    console.error("[email] Failed to send payment-failed email", { bookingId, error: err instanceof Error ? err.message : String(err) })
   }
 }

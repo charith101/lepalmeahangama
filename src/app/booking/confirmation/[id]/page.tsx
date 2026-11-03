@@ -7,8 +7,37 @@ import { Badge } from "@/components/ui/badge"
 import { bookingOrderSchema } from "@/lib/seo"
 import { CheckCircle } from "lucide-react"
 import type { Database } from "@/lib/supabase/database.types"
+import { computeBookingTotal } from "@/lib/booking-pricing"
+import { formatHotelDateTime } from "@/lib/datetime"
+import { StatusRefresher } from "./status-refresher"
 
 export const dynamic = "force-dynamic"
+
+// "14:00:00" (settings wall-clock value) → "2:00 PM"
+function formatWallClock(value: string | null | undefined): string {
+  const [h, m] = (value ?? "").split(":")
+  const hour = Number(h)
+  if (!h || Number.isNaN(hour)) return ""
+  return `${((hour + 11) % 12) + 1}:${m || "00"} ${hour >= 12 ? "PM" : "AM"}`
+}
+
+// bk09: heading/copy derive from the live status so "Pending Payment" bookings
+// are never told they are confirmed. confirmed/checked_in/checked_out keep the
+// confirmed wording.
+const statusCopy: Record<string, { heading: string; copy: string }> = {
+  pending_payment: {
+    heading: "Complete your payment to confirm",
+    copy: "Your booking is held for you but is not confirmed yet. Complete your payment to confirm it — we'll send a confirmation email once it goes through.",
+  },
+  cancelled: {
+    heading: "Booking cancelled",
+    copy: "This booking has been cancelled. If you think this is a mistake, please contact us.",
+  },
+}
+const confirmedCopy = {
+  heading: "Booking Confirmed",
+  copy: "Your booking has been confirmed. A confirmation email will be sent.",
+}
 
 const statusLabels: Record<string, string> = {
   pending_payment: "Pending Payment",
@@ -43,10 +72,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const bookingMeta = booking as unknown as { rooms: { room_number: string; room_categories: { name: string } } | null }
   const metaRoom = bookingMeta.rooms
   const metaTotal = Number(booking.room_total_usd ?? 0) + Number(booking.board_total_usd ?? 0)
+  const metaConfirmed = booking.status === "confirmed" || booking.status === "checked_in" || booking.status === "checked_out"
 
   return {
-    title: `Booking Confirmed — ${metaRoom?.room_categories?.name || "Room"} — Le Palme Ahangama`,
-    description: `Booking confirmed at Le Palme Ahangama. ${metaRoom?.room_categories?.name || "Room"} from ${booking.check_in} to ${booking.check_out}. Total: ${formatCurrency(metaTotal)}.`,
+    title: `${metaConfirmed ? "Booking Confirmed" : "Booking"} — ${metaRoom?.room_categories?.name || "Room"} — Le Palme Ahangama`,
+    description: `${metaConfirmed ? "Booking confirmed at" : "Booking at"} Le Palme Ahangama. ${metaRoom?.room_categories?.name || "Room"} from ${booking.check_in} to ${booking.check_out}. Total: ${formatCurrency(metaTotal)}.`,
     robots: { index: false, follow: true },
   }
 }
@@ -62,7 +92,7 @@ export default async function ConfirmationPage({ params }: Props) {
     .single()
 
   const { data: settings } = await supabase
-    .from("settings").select("surcharge_pct").eq("id", true).maybeSingle()
+    .from("settings").select("surcharge_pct, check_in_time, check_out_time").eq("id", true).maybeSingle()
 
   if (!booking) {
     return (
@@ -95,7 +125,21 @@ export default async function ConfirmationPage({ params }: Props) {
   const transferTotal = transfers.reduce((s, t) => s + Number(t.price_usd || 0), 0)
   const surchargePct = Number(settings?.surcharge_pct || 0)
   const roomTotal = Number(booking.room_total_usd || 0) + Number(booking.board_total_usd || 0) + rentalTotal + transferTotal
-  const grandTotal = roomTotal * (1 + surchargePct / 100)
+  // N11/§5.4: grand total spans the whole group (every room + all extras + surcharge),
+  // mirroring computeBookingTotal — the amount PayHere actually charged. Legacy rows
+  // without a group_booking_id have no siblings, so the single-row math is the total.
+  const groupId = b.group_booking_id ?? booking.id
+  const groupTotal = await computeBookingTotal(groupId)
+  const grandTotal = "total" in groupTotal ? groupTotal.total : roomTotal * (1 + surchargePct / 100)
+
+  const checkInTime = formatWallClock(settings?.check_in_time)
+  const checkOutTime = formatWallClock(settings?.check_out_time)
+  const stayTimes = [
+    checkInTime && `Check-in from ${checkInTime}`,
+    checkOutTime && `Check-out by ${checkOutTime}`,
+  ].filter(Boolean).join(" · ")
+
+  const copy = statusCopy[booking.status] ?? confirmedCopy
 
   const schema = bookingOrderSchema(
     booking.id,
@@ -110,11 +154,12 @@ export default async function ConfirmationPage({ params }: Props) {
     <div className="min-h-screen pt-24 pb-16 px-4">
       <div className="max-w-lg mx-auto space-y-8">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+        {(booking.status === "pending_payment" || booking.status === "cancelled") && <StatusRefresher />}
 
         <div className="text-center space-y-3">
           <CheckCircle className="size-10 mx-auto text-aloe-10" strokeWidth={1.5} />
-          <h1 className="text-3xl font-light tracking-tight text-ink dark:text-on-primary">Booking Confirmed</h1>
-          <p className="text-sm text-muted-foreground">Your booking has been confirmed. A confirmation email will be sent.</p>
+          <h1 className="text-3xl font-light tracking-tight text-ink dark:text-on-primary">{copy.heading}</h1>
+          <p className="text-sm text-muted-foreground">{copy.copy}</p>
         </div>
 
         <div className="rounded-lg border border-hairline-light dark:border-hairline-dark p-6 space-y-4">
@@ -142,6 +187,9 @@ export default async function ConfirmationPage({ params }: Props) {
             <span className="text-sm text-muted-foreground">Check-out</span>
             <span className="text-sm text-ink dark:text-on-primary">{booking.check_out}</span>
           </div>
+          {stayTimes && (
+            <p className="text-xs text-muted-foreground text-center">{stayTimes}</p>
+          )}
           {Number(booking.board_total_usd ?? 0) > 0 && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Board plan</span>
@@ -157,7 +205,7 @@ export default async function ConfirmationPage({ params }: Props) {
           {transfers.map((t, i) => (
             <div key={i} className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Transfer ({t.direction})</span>
-              <span className="text-sm text-ink dark:text-on-primary">{t.transfer_datetime}{t.flight_number ? ` &middot; ${t.flight_number}` : ""}{t.price_usd ? ` &middot; ${formatCurrency(t.price_usd)}` : ""}</span>
+              <span className="text-sm text-ink dark:text-on-primary">{formatHotelDateTime(t.transfer_datetime)}{t.flight_number ? ` &middot; ${t.flight_number}` : ""}{t.price_usd ? ` &middot; ${formatCurrency(t.price_usd)}` : ""}</span>
             </div>
           ))}
           {guest && (
@@ -185,6 +233,11 @@ export default async function ConfirmationPage({ params }: Props) {
             Back to Home
           </span>
         </Link>
+        <p className="text-center">
+          <Link href="/booking/lookup" className="text-sm text-muted-foreground underline-offset-2 hover:underline">
+            Look up your booking later
+          </Link>
+        </p>
       </div>
     </div>
   )

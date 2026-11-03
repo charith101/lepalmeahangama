@@ -23,7 +23,7 @@ type PaymentReviewProps = {
   transferTotal: number
   surchargePct: number
   grandTotal: number
-  guest: { fullName: string; email: string; phone: string; nationality: string; nic_passport: string }
+  guest: { fullName: string; email: string; phone: string; nationality: string; nic_passport: string; numGuests: number }
   extras: {
     surfboardQty: number
     surfboardStart: string; surfboardEnd: string
@@ -50,9 +50,12 @@ export function PaymentReview({
 }: PaymentReviewProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "booking" | "error">("idle")
   const [error, setError] = useState("")
+  // The server recomputes the payable total; when it differs from the displayed
+  // one we show the server's figure so what's on screen equals what PayHere charges.
+  const [serverGrandTotal, setServerGrandTotal] = useState<number | null>(null)
 
   async function checkAndBuildData() {
-    const allRooms: Array<{ room_id: string; check_in: string; check_out: string }> = []
+    const allRooms: Array<{ room_id: string; check_in: string; check_out: string; maxOccupancy: number; num_guests: number }> = []
     for (const sel of roomSelections) {
       const avail = await getAvailableRooms(sel.categoryId, checkIn, checkOut)
       if (avail.error || !avail.data?.length) {
@@ -63,8 +66,27 @@ export function PaymentReview({
           room_id: avail.data[i % avail.data.length].id,
           check_in: checkIn,
           check_out: checkOut,
+          maxOccupancy: sel.maxOccupancy,
+          num_guests: 0,
         })
       }
+    }
+
+    // bk01: split the party across the booked rooms (even split, capped by each
+    // room's maxOccupancy, leftovers to rooms with spare capacity).
+    const totalGuests = Math.max(1, Math.round(Number(guest.numGuests) || 1))
+    const per = Math.floor(totalGuests / allRooms.length)
+    const extra = totalGuests - per * allRooms.length
+    let remaining = totalGuests
+    for (let i = 0; i < allRooms.length; i++) {
+      allRooms[i].num_guests = Math.min(allRooms[i].maxOccupancy, per + (i < extra ? 1 : 0))
+      remaining -= allRooms[i].num_guests
+    }
+    for (let i = 0; i < allRooms.length && remaining > 0; i++) {
+      const spare = allRooms[i].maxOccupancy - allRooms[i].num_guests
+      const add = Math.min(spare, remaining)
+      allRooms[i].num_guests += add
+      remaining -= add
     }
 
     const equipment: Array<{ unit_id: string; start_date: string; end_date: string }> = []
@@ -72,10 +94,13 @@ export function PaymentReview({
       const surfStart = extras.surfboardStart || checkIn
       const surfEnd = extras.surfboardEnd || checkOut
       const units = await getAvailableUnits(EQUIPMENT_SURFBOARD, surfStart, surfEnd)
-      if (units.data) {
-        for (let i = 0; i < Math.min(extras.surfboardQty, units.data.length); i++) {
-          equipment.push({ unit_id: units.data[i].id, start_date: surfStart, end_date: surfEnd })
-        }
+      if (units.error) throw new Error(units.error)
+      // bk03/N4: block instead of silently shrinking the order
+      if (!units.data || units.data.length < extras.surfboardQty) {
+        throw new Error(`Only ${units.data?.length ?? 0} of ${extras.surfboardQty} surfboards is available for these dates — please reduce the quantity.`)
+      }
+      for (let i = 0; i < extras.surfboardQty; i++) {
+        equipment.push({ unit_id: units.data[i].id, start_date: surfStart, end_date: surfEnd })
       }
     }
 
@@ -89,22 +114,31 @@ export function PaymentReview({
       const end = it.end || checkOut
       const units = await getAvailableUnits(it.categoryId, start, end)
       if (units.error) throw new Error(units.error)
-      if (!units.data || units.data.length === 0) {
-        throw new Error(`No vehicles available for ${cat.name} on the selected dates`)
+      // bk03/N4: block instead of silently shrinking the order
+      if (!units.data || units.data.length < it.qty) {
+        throw new Error(`Only ${units.data?.length ?? 0} of ${it.qty} ${cat.name} vehicles are available for these dates — please reduce the quantity.`)
       }
-      // ponytail: assign qty units (cycle through if more requested than free). All units
-      // share the same dates and price; we record one equipment_booking per unit so the
-      // dashboard equipment panel can see each one individually.
-      for (let i = 0; i < Math.min(it.qty, units.data.length); i++) {
+      for (let i = 0; i < it.qty; i++) {
         equipment.push({ unit_id: units.data[i].id, start_date: start, end_date: end })
       }
     }
 
+    // bk02/N5: the server computes transfer_datetime from the raw HH:mm time and
+    // direction against the correct stay date — don't build it client-side.
     const transfer = extras.transferNeeded
-      ? { route_id: ROUTE_CMB, direction: extras.transferDirection as "arrival" | "departure", flight_number: extras.flightNumber || undefined, transfer_datetime: `${checkIn}T${extras.transferTime || "12:00"}:00Z` }
+      ? { route_id: ROUTE_CMB, direction: extras.transferDirection as "arrival" | "departure", flight_number: extras.flightNumber || undefined, transferTime: extras.transferTime }
       : undefined
 
-    return { allRooms, equipment, transfer }
+    return {
+      allRooms: allRooms.map((room) => ({
+        room_id: room.room_id,
+        check_in: room.check_in,
+        check_out: room.check_out,
+        num_guests: room.num_guests,
+      })),
+      equipment,
+      transfer,
+    }
   }
 
   async function handlePayhere() {
@@ -121,7 +155,8 @@ export function PaymentReview({
         transfer,
       })
       if (result.error) { setError(result.error); setStatus("idle"); return }
-      const { bookingIds, groupBookingId, orderId, grandTotal } = result.data!
+      const { bookingIds, groupBookingId, orderId, grandTotal: serverTotal } = result.data!
+      if (Math.abs(serverTotal - grandTotal) > 0.01) setServerGrandTotal(serverTotal)
       const currency = "USD"
 
       const hashRes = await fetch("/api/payhere/hash", {
@@ -136,18 +171,21 @@ export function PaymentReview({
 
       const form = document.createElement("form")
       form.method = "POST"
-      form.action = "https://sandbox.payhere.lk/pay/checkout"
+      form.action =
+        process.env.NEXT_PUBLIC_PAYHERE_MODE === "live"
+          ? "https://www.payhere.lk/pay/checkout"
+          : "https://sandbox.payhere.lk/pay/checkout"
       form.style.display = "none"
 
       const fields: Record<string, string> = {
         merchant_id,
         return_url: `${window.location.origin}/api/payhere/return?booking_id=${bookingIds[0]}`,
-        cancel_url: `${window.location.origin}/api/payhere/cancel`,
+        cancel_url: `${window.location.origin}/api/payhere/cancel?group=${groupBookingId}`,
         notify_url: `${window.location.origin}/api/payhere/notify`,
         order_id: orderId,
         items: "Le Palme Ahangama — Room Booking",
         currency,
-        amount: grandTotal.toFixed(2),
+        amount: serverTotal.toFixed(2),
         hash,
         first_name: guest.fullName.split(" ")[0] || guest.fullName,
         last_name: guest.fullName.split(" ").slice(1).join(" ") || "Guest",
@@ -170,8 +208,9 @@ export function PaymentReview({
 
       document.body.appendChild(form)
       form.submit()
-    } catch {
-      setError("Something went wrong. Please try again.")
+    } catch (e) {
+      // bk03/N4: surface the explicit availability message instead of a generic error
+      setError(e instanceof Error && e.message ? e.message : "Something went wrong. Please try again.")
       setStatus("idle")
     }
   }
@@ -270,7 +309,7 @@ export function PaymentReview({
           </tr>
           <tr>
             <td className="py-3 font-bold text-base text-stone-900 dark:text-stone-100">Grand total</td>
-            <td className="py-3 text-right font-bold text-base text-stone-900 dark:text-stone-100">{formatCurrency(grandTotal)}</td>
+            <td className="py-3 text-right font-bold text-base text-stone-900 dark:text-stone-100">{formatCurrency(serverGrandTotal ?? grandTotal)}</td>
           </tr>
         </tbody>
       </table>

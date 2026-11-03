@@ -20,6 +20,11 @@ export default async function DashboardPage() {
   monthStart.setDate(1)
   const monthStartStr = monthStart.toISOString().split("T")[0]
 
+  // 365-day window of completed payments for the revenue drill-down dialog.
+  const yearAgo = new Date()
+  yearAgo.setFullYear(yearAgo.getFullYear() - 1)
+  const yearAgoStr = yearAgo.toISOString().split("T")[0]
+
   // Kick off all independent queries in parallel (single roundtrip each,
   // no sequential waterfall). Only the outstanding-revenue query depends on
   // prior results and runs in a second batch.
@@ -36,19 +41,21 @@ export default async function DashboardPage() {
     monthPmtsRes,
     issuedInvsRes,
     shiftRes,
+    drillPmtsRes,
   ] = await Promise.all([
     supabase.from("bookings").select("*", { count: "exact", head: true }).eq("check_in", today).in("status", ["confirmed", "checked_in"]),
     supabase.from("bookings").select("*", { count: "exact", head: true }).eq("check_out", today).in("status", ["checked_in", "checked_out"]),
     supabase.from("rooms").select("*", { count: "exact", head: true }).eq("operational_status", "active"),
     supabase.from("bookings").select("*", { count: "exact", head: true }).lte("check_in", today).gte("check_out", today).eq("status", "checked_in"),
     supabase.from("rooms").select("*", { count: "exact", head: true }).eq("operational_status", "active").in("housekeeping_status", ["dirty", "cleaning"]),
-    supabase.from("bookings").select("*", { count: "exact", head: true }).eq("status", "confirmed").lte("check_in", today),
+    supabase.from("bookings").select("*", { count: "exact", head: true }).eq("status", "confirmed").lte("check_in", today).gte("check_out", today),
     supabase.from("rooms").select("*, room_categories(name)").eq("operational_status", "active").order("room_number"),
     supabase.from("bookings").select("id, room_id, check_in, check_out, status, guests(id, full_name)").in("status", ["confirmed", "checked_in"]).lte("check_in", today).gte("check_out", today),
     supabase.from("payments").select("amount_usd").eq("status", "completed").gte("paid_at", todayStart).lte("paid_at", todayEnd),
     supabase.from("payments").select("amount_usd").eq("status", "completed").gte("paid_at", `${monthStartStr}T00:00:00Z`),
     supabase.from("invoices").select("grand_total_usd, booking_id").eq("status", "issued"),
     supabase.from("shift_notes").select("*, profiles!created_by_staff_id(full_name)").order("created_at", { ascending: false }).limit(10),
+    supabase.from("payments").select("id, amount_usd, paid_at, method, booking_id, bookings(guests(full_name))").eq("status", "completed").gte("paid_at", `${yearAgoStr}T00:00:00Z`).order("paid_at", { ascending: false }),
   ])
 
   const arrivals = arrivalsRes.count
@@ -64,7 +71,12 @@ export default async function DashboardPage() {
       : 0
 
   const roomStatuses = (roomsDataRes.data ?? []).map((r) => {
-    const booking = (activeBookingsRes.data ?? []).find((b) => b.room_id === r.id)
+    const candidates = (activeBookingsRes.data ?? []).filter((b) => b.room_id === r.id)
+    // Prefer the in-house guest, else today's arrival, else the next overlapping booking.
+    const booking =
+      candidates.find((b) => b.status === "checked_in") ??
+      candidates.find((b) => b.check_in === today) ??
+      candidates[0]
     return {
       id: r.id,
       room_number: r.room_number,
@@ -85,6 +97,15 @@ export default async function DashboardPage() {
 
   const todayRevenue = (todayPmtsRes.data ?? []).reduce((s, p) => s + Number(p.amount_usd || 0), 0)
   const monthToDate = (monthPmtsRes.data ?? []).reduce((s, p) => s + Number(p.amount_usd || 0), 0)
+
+  const drillPayments = (drillPmtsRes.data ?? []).map((p) => ({
+    id: p.id,
+    amount_usd: Number(p.amount_usd),
+    paid_at: p.paid_at,
+    method: p.method,
+    booking_id: p.booking_id,
+    guest_name: p.bookings?.guests?.full_name ?? null,
+  }))
 
   // Revenue: outstanding (issued invoices - paid)
   const issuedInvs = issuedInvsRes.data ?? []
@@ -122,7 +143,7 @@ export default async function DashboardPage() {
             <QuickCheckinSheet />
             <QuickCheckoutSheet />
             <MarkCleanSheet />
-            <Button render={<Link href="/dashboard/bookings/new" />}>
+            <Button render={<Link href="/dashboard/bookings/new?source=walk_in" />}>
               <UserPlus className="size-4" />
               Walk-in
             </Button>
@@ -143,6 +164,10 @@ export default async function DashboardPage() {
             todayRevenue={todayRevenue}
             monthToDate={monthToDate}
             outstanding={outstanding}
+            payments={drillPayments}
+            today={today}
+            monthStart={monthStartStr}
+            issuedBookingIds={issuedBids}
           />
           <ShiftNotes notes={shiftData ?? []} />
         </div>

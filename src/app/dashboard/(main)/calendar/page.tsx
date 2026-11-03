@@ -29,8 +29,7 @@ export default async function CalendarPage() {
       )`,
       )
       .lte("check_in", endStr)
-      .gte("check_out", todayStr)
-      .in("status", ["pending_payment", "confirmed", "checked_in", "maintenance_block"]),
+      .gte("check_out", todayStr),
     supabase
       .from("rooms")
       .select(

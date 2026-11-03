@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, roomSlug } from "@/lib/utils"
 import { BedDouble } from "lucide-react"
 
 type RoomCategory = {
@@ -10,10 +10,6 @@ type RoomCategory = {
   max_occupancy: number
   description: string | null
   image_url: string | null
-}
-
-function slugify(text: string) {
-  return text.toLowerCase().replace(/\s+/g, "-")
 }
 
 export function RoomCategoryCard({ name, base_price_usd, max_occupancy, image_url }: RoomCategory) {
@@ -45,7 +41,7 @@ export function RoomCategoryCard({ name, base_price_usd, max_occupancy, image_ur
         <p className="text-sm font-sans text-stone-500 dark:text-stone-400 mt-1">per night</p>
         <div className="mt-auto pt-6">
           <Link
-            href={`/rooms/${slugify(name)}`}
+            href={`/rooms/${roomSlug(name)}`}
             className="block w-full py-2.5 bg-stone-900 dark:bg-stone-800 text-white text-sm font-sans font-medium text-center hover:bg-stone-800 dark:hover:bg-stone-700 transition-colors"
           >
             View Details

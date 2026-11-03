@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,7 +23,7 @@ import { moveGuestToRoom } from "@/lib/actions/rooms"
 import {
   checkIn, checkOut, cancelBooking, updateBookingStatus, recordDeposit, refundBookingPayment
 } from "@/lib/actions/bookings"
-import { generateInvoice, recordPayment } from "@/lib/actions/billing"
+import { generateInvoice, recordPayment, deleteCharge } from "@/lib/actions/billing"
 import { confirmBankTransfer } from "@/lib/actions/billing"
 
 function escapeHtml(s: string) {
@@ -59,6 +60,8 @@ type Booking = {
   payments: Array<{ id: string; amount_usd: number; method: string; status: string; paid_at: string | null }>
 }
 
+type Charge = Booking["booking_charges"][number]
+
 export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Booking; minDepositPct?: number }) {
   const router = useRouter()
   const [showCheckInDialog, setShowCheckInDialog] = useState(false)
@@ -73,10 +76,14 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
   const invoices = booking.invoices
   const [showDepositDialog, setShowDepositDialog] = useState(false)
   const [depositAmount, setDepositAmount] = useState("")
+  const [depositMethod, setDepositMethod] = useState<string>("cash")
   const [showMoveRoomDialog, setShowMoveRoomDialog] = useState(false)
-  const [availableRooms, setAvailableRooms] = useState<Array<{ id: string; room_number: string; room_categories: { name: string } }>>([])
+  const [availableRooms, setAvailableRooms] = useState<Array<{ id: string; room_number: string; room_categories: { name: string; base_price_usd: number } }>>([])
   const [selectedRoomId, setSelectedRoomId] = useState("")
   const [loadingRooms, setLoadingRooms] = useState(false)
+  const [showInvoiceConfirm, setShowInvoiceConfirm] = useState(false)
+  const [editingCharge, setEditingCharge] = useState<Charge | null>(null)
+  const [chargeToDelete, setChargeToDelete] = useState<Charge | null>(null)
 
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false)
   const [printInvoice, setPrintInvoice] = useState<{
@@ -88,11 +95,14 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
   const invoice = invoices[0]
 
   const depositDue = (booking.room_total_usd ?? 0) * (minDepositPct / 100)
-  const depositReceived = payments
+  const paidTotal = payments
     .filter((p) => p.status === "completed")
     .reduce((s, p) => s + p.amount_usd, 0)
+  const depositReceived = paidTotal
   const depositRemaining = Math.max(0, depositDue - depositReceived)
   const isDepositMet = depositReceived >= depositDue
+  const invoiceBalance = invoice ? Math.max(0, invoice.grand_total_usd - paidTotal) : 0
+  const stayNights = Math.max(1, Math.round((new Date(booking.check_out).getTime() - new Date(booking.check_in).getTime()) / 86400000))
 
   async function handleAction(action: string, extra?: { nic_or_passport?: string }) {
     setActionLoading(action)
@@ -145,10 +155,11 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
     }
   }
 
-  async function handleGenerateInvoice() {
+  async function handleGenerateInvoice(force = false) {
+    if (invoice && !force) { setShowInvoiceConfirm(true); return }
     setActionLoading("invoice")
     try {
-      const { data, error } = await generateInvoice(booking.id)
+      const { data, error } = await generateInvoice(booking.id, force)
       if (error) throw new Error(error)
       if (data) {
         setPrintInvoice({
@@ -247,6 +258,23 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
     }
   }
 
+  async function handleDeleteCharge() {
+    if (!chargeToDelete) return
+    setActionLoading("delete-charge")
+    try {
+      const { error } = await deleteCharge(chargeToDelete.id)
+      if (error) throw new Error(error)
+      setCharges((prev) => prev.filter((c) => c.id !== chargeToDelete.id))
+      setChargeToDelete(null)
+      toast.success("Charge deleted")
+      router.refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete charge")
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   function renderActions() {
     switch (booking.status) {
       case "pending_payment":
@@ -289,14 +317,14 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
           <div className="flex gap-2 flex-wrap">
             <Button onClick={() => setShowChargeForm(true)} disabled={actionLoading !== null}>Post Charge</Button>
             <Button onClick={() => { setShowMoveRoomDialog(true) }} disabled={actionLoading !== null}>Move Room</Button>
-            <Button onClick={handleGenerateInvoice} disabled={actionLoading !== null}>
+            <Button onClick={() => handleGenerateInvoice()} disabled={actionLoading !== null}>
               {actionLoading === "invoice" ? "Generating..." : "Generate Invoice"}
             </Button>
             <Button variant="secondary" onClick={() => handleAction("checked_out")} disabled={actionLoading !== null}>Check Out</Button>
           </div>
         )
       case "checked_out":
-        return invoice ? null : <Button onClick={handleGenerateInvoice}>Generate Invoice</Button>
+        return invoice ? null : <Button onClick={() => handleGenerateInvoice()}>Generate Invoice</Button>
       default:
         return null
     }
@@ -321,7 +349,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
       const booked = new Set((conflictRows ?? []).map((b: { room_id: string }) => b.room_id))
       const { data: allRooms } = await supabase
         .from("rooms")
-        .select("*, room_categories(name)")
+        .select("*, room_categories(name, base_price_usd)")
         .neq("id", booking.rooms.id)
         .eq("operational_status", "active")
         .order("room_number")
@@ -414,7 +442,13 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
         <CardContent>
           {showChargeForm && (
             <div className="mb-4">
-              <ChargeForm bookingId={booking.id} onSuccess={(charge) => { setCharges([...charges, charge]); setShowChargeForm(false) }} onCancel={() => setShowChargeForm(false)} />
+              <ChargeForm
+                bookingId={booking.id}
+                initial={editingCharge}
+                onSuccess={(charge) => { setCharges((prev) => [...prev, charge]); setEditingCharge(null); setShowChargeForm(false) }}
+                onUpdated={(charge) => { setCharges((prev) => prev.map((c) => (c.id === charge.id ? charge : c))); setEditingCharge(null); setShowChargeForm(false); router.refresh() }}
+                onCancel={() => { setEditingCharge(null); setShowChargeForm(false) }}
+              />
             </div>
           )}
           {charges.length === 0 ? (
@@ -428,6 +462,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
                   <TableHead>Qty</TableHead>
                   <TableHead>Unit Price</TableHead>
                   <TableHead>Total</TableHead>
+                  <TableHead className="w-20 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -438,6 +473,27 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
                     <TableCell>{c.quantity}</TableCell>
                     <TableCell>{formatCurrency(c.unit_price_usd)}</TableCell>
                     <TableCell>{formatCurrency(c.line_total_usd)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Edit ${c.description}`}
+                        disabled={actionLoading !== null}
+                        onClick={() => { setEditingCharge(c); setShowChargeForm(true) }}
+                      >
+                        <Pencil />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-destructive"
+                        aria-label={`Delete ${c.description}`}
+                        disabled={actionLoading !== null}
+                        onClick={() => setChargeToDelete(c)}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -447,7 +503,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
       </Card>
 
       {invoice && (
-        <InvoiceView invoice={invoice} />
+        <InvoiceView invoice={invoice} paidTotal={paidTotal} />
       )}
 
       <Card>
@@ -487,7 +543,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
                           onClick={async () => {
                             setActionLoading("refund")
                             try {
-                              const { error } = await refundBookingPayment(booking.id)
+                              const { error } = await refundBookingPayment(p.id)
                               if (error) throw new Error(error)
                               toast.success("Payment refunded via PayHere")
                               router.refresh()
@@ -517,7 +573,7 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Current room: <strong>{booking.rooms.room_number}</strong> ({booking.rooms.room_categories.name})
+              Current room: <strong>{booking.rooms.room_number}</strong> ({booking.rooms.room_categories.name}) &middot; room total <strong>{formatCurrency(booking.room_total_usd ?? 0)}</strong>. The total is recomputed when you move.
             </p>
             {loadingRooms ? (
               <p className="text-sm text-muted-foreground">Loading available rooms...</p>
@@ -525,19 +581,28 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
               <p className="text-sm text-muted-foreground">No available rooms for these dates</p>
             ) : (
               <div className="space-y-1 max-h-48 overflow-y-auto">
-                {availableRooms.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => setSelectedRoomId(r.id)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm border transition-colors ${
-                      selectedRoomId === r.id
-                        ? "border-primary bg-primary/10"
-                        : "border-input hover:bg-accent"
-                    }`}
-                  >
-                    {r.room_number} — {r.room_categories.name}
-                  </button>
-                ))}
+                {availableRooms.map((r) => {
+                  const newTotal = r.room_categories.base_price_usd * stayNights
+                  const delta = newTotal - (booking.room_total_usd ?? 0)
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => setSelectedRoomId(r.id)}
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm border transition-colors ${
+                        selectedRoomId === r.id
+                          ? "border-primary bg-primary/10"
+                          : "border-input hover:bg-accent"
+                      }`}
+                    >
+                      <span className="flex justify-between gap-2">
+                        <span>{r.room_number} — {r.room_categories.name}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatCurrency(newTotal)}{delta === 0 ? " (no change)" : ` (${delta > 0 ? "+" : "−"}${formatCurrency(Math.abs(delta))})`}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             )}
             <Button
@@ -545,9 +610,10 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
                 if (!selectedRoomId) { toast.error("Select a room"); return }
                 setActionLoading("move")
                 try {
-                  const { error } = await moveGuestToRoom(booking.id, selectedRoomId)
+                  const { data, error } = await moveGuestToRoom(booking.id, selectedRoomId)
                   if (error) throw new Error(error)
-                  toast.success("Room changed")
+                  const moved = data as { room_total_usd?: number | null } | null
+                  toast.success(moved?.room_total_usd != null ? `Room moved — total updated to ${formatCurrency(moved.room_total_usd)}` : "Room moved")
                   setShowMoveRoomDialog(false)
                   router.refresh()
                 } catch (e) {
@@ -578,13 +644,23 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
               <Label>Amount (USD)</Label>
               <Input type="number" step="0.01" min="0" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="0.00" />
             </div>
+            <div className="space-y-1">
+              <Label>Method</Label>
+              <div className="flex gap-2">
+                {(["cash", "bank_transfer", "card_payhere"] as const).map((m) => (
+                  <Button key={m} variant={depositMethod === m ? "default" : "outline"} size="sm" onClick={() => setDepositMethod(m)} className="capitalize">
+                    {m.replace("_", " ")}
+                  </Button>
+                ))}
+              </div>
+            </div>
             <Button
               onClick={async () => {
                 const amount = parseFloat(depositAmount)
                 if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return }
                 setActionLoading("deposit")
                 try {
-                  const { error } = await recordDeposit(booking.id, amount)
+                  const { error } = await recordDeposit(booking.id, amount, depositMethod as "cash" | "bank_transfer" | "card_payhere")
                   if (error) throw new Error(error)
                   toast.success("Deposit recorded")
                   setShowDepositDialog(false)
@@ -624,8 +700,53 @@ export function BookingDetail({ booking, minDepositPct = 50 }: { booking: Bookin
                 ))}
               </div>
             </div>
+            {invoice && (
+              <p className="text-sm text-muted-foreground">
+                Balance remaining: <span className={invoiceBalance > 0 ? "text-destructive font-medium" : "font-medium"}>{formatCurrency(invoiceBalance)} of {formatCurrency(invoice.grand_total_usd)}</span>
+              </p>
+            )}
             <Button onClick={handleRecordPayment} disabled={actionLoading !== null} className="w-full">
               {actionLoading === "payment" ? "Recording..." : "Record Payment"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showInvoiceConfirm} onOpenChange={setShowInvoiceConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace invoice?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            An invoice was issued on {invoice?.issued_at ? format(new Date(invoice.issued_at), "PPp") : "an earlier date"} — replace it? Totals will be recalculated from the current charges.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowInvoiceConfirm(false)}>Cancel</Button>
+            <Button onClick={() => { setShowInvoiceConfirm(false); handleGenerateInvoice(true) }} disabled={actionLoading !== null}>
+              {actionLoading === "invoice" ? "Generating..." : "Replace Invoice"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!chargeToDelete} onOpenChange={(o) => { if (!o) setChargeToDelete(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete charge?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            &ldquo;{chargeToDelete?.description}&rdquo; ({formatCurrency(chargeToDelete?.line_total_usd ?? 0)}) will be
+            removed permanently.
+          </p>
+          {invoice && (
+            <p className="text-sm text-amber-600">
+              An invoice has already been issued — regenerate it after this change.
+            </p>
+          )}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setChargeToDelete(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteCharge} disabled={actionLoading !== null}>
+              {actionLoading === "delete-charge" ? "Deleting..." : "Delete Charge"}
             </Button>
           </div>
         </DialogContent>

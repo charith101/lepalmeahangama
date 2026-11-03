@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner"
 import { PlusIcon, PlaneLandingIcon, PlaneTakeoffIcon, CheckIcon, XIcon } from "lucide-react"
 import { transferSchema } from "@/lib/validations"
+import { hotelLocalToUtcIso, hotelDate, formatHotelTime } from "@/lib/datetime"
 
 interface Guest {
   id: string; full_name: string; email: string | null; phone: string | null
@@ -29,31 +30,74 @@ interface Transfer {
   guest: Guest; route: Route
 }
 
+interface StayBooking {
+  id: string; check_in: string; check_out: string; status: string
+}
+
+function friendlyError(message: string) {
+  if (message.toLowerCase().includes("row-level security")) return "You don't have permission to do that."
+  return message
+}
+
 export function TransferPanel({
   transfers, routes, guests,
 }: {
   transfers: Transfer[]; routes: Route[]; guests: Guest[]
 }) {
   const supabase = createClient()
-  const today = new Date().toISOString().split("T")[0]
-  const [filterDate, setFilterDate] = useState(today)
+  // Default filter is today's hotel-local date (not the UTC date, which drifts after midnight hotel time).
+  const [filterDate, setFilterDate] = useState(() => hotelDate(new Date().toISOString()))
   const [items, setItems] = useState(transfers)
   const [open, setOpen] = useState(false)
+  const [guestBookings, setGuestBookings] = useState<StayBooking[]>([])
   const [newTransfer, setNewTransfer] = useState({
-    routeId: "", guestId: "", direction: "arrival" as "arrival" | "departure",
+    routeId: "", guestId: "", bookingId: "", direction: "arrival" as "arrival" | "departure",
     flightNumber: "", datetime: "",
   })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
-  const filtered = items.filter((t) => t.transfer_datetime.startsWith(filterDate))
+  // De-duplicate guest options by email (fall back to name) — the guests table
+  // collects duplicates from walk-ins and online bookings.
+  const guestOptions = useMemo(() => {
+    const seen = new Map<string, Guest>()
+    for (const g of guests) {
+      const key = (g.email ?? g.full_name).trim().toLowerCase()
+      if (!seen.has(key)) seen.set(key, g)
+    }
+    return [...seen.values()]
+  }, [guests])
+
+  // N5: compare the hotel-local date of the stored timestamp, not the raw UTC string.
+  const filtered = items.filter((t) => hotelDate(t.transfer_datetime) === filterDate)
 
   function updateField(field: string, value: string) {
     setNewTransfer((prev) => ({ ...prev, [field]: value }))
     setFieldErrors((prev) => ({ ...prev, [field]: "" }))
   }
 
+  // op12: when a guest is picked, load their stays so the transfer can be linked (optionally).
+  async function handleGuestChange(guestId: string) {
+    updateField("guestId", guestId)
+    setGuestBookings([])
+    setNewTransfer((prev) => ({ ...prev, bookingId: "" }))
+    if (!guestId) return
+    const { data } = await supabase
+      .from("bookings")
+      .select("id, check_in, check_out, status")
+      .eq("guest_id", guestId)
+      .not("status", "in", "(cancelled,no_show)")
+      .order("check_in", { ascending: false })
+    const stays = (data ?? []) as StayBooking[]
+    setGuestBookings(stays)
+    // Preselect when there's exactly one stay.
+    if (stays.length === 1) setNewTransfer((prev) => ({ ...prev, bookingId: stays[0].id }))
+  }
+
   async function handleCreate() {
-    const result = transferSchema.safeParse(newTransfer)
+    const result = transferSchema.safeParse({
+      ...newTransfer,
+      bookingId: newTransfer.bookingId === "none" ? "" : newTransfer.bookingId,
+    })
     if (!result.success) {
       const errs: Record<string, string> = {}
       for (const issue of result.error.issues) {
@@ -68,24 +112,27 @@ export function TransferPanel({
     const { data, error } = await supabase.from("airport_transfers").insert({
       route_id: result.data.routeId,
       guest_id: result.data.guestId,
+      booking_id: result.data.bookingId || null,
       direction: result.data.direction,
       flight_number: result.data.flightNumber || null,
-      transfer_datetime: result.data.datetime,
+      // N5: the datetime-local input is hotel time — store as UTC so it doesn't drift 5h30m.
+      transfer_datetime: hotelLocalToUtcIso(result.data.datetime),
       price_usd: route?.fixed_price_usd ?? null,
       status: "scheduled",
     }).select("*, guest:guests(*), route:airport_transfer_routes(*)").single()
 
-    if (error) { toast.error(error.message); return }
+    if (error) { toast.error(friendlyError(error.message)); return }
     setItems((prev) => [data, ...prev])
     setOpen(false)
-    setNewTransfer({ routeId: "", guestId: "", direction: "arrival", flightNumber: "", datetime: "" })
+    setNewTransfer({ routeId: "", guestId: "", bookingId: "", direction: "arrival", flightNumber: "", datetime: "" })
+    setGuestBookings([])
     setFieldErrors({})
     toast.success("Transfer created")
   }
 
   async function handleStatus(id: string, status: "completed" | "cancelled") {
     const { error } = await supabase.from("airport_transfers").update({ status }).eq("id", id)
-    if (error) { toast.error(error.message); return }
+    if (error) { toast.error(friendlyError(error.message)); return }
     setItems((prev) => prev.map((t) => (t.id === id ? { ...t, status } as Transfer : t)))
     toast.success(`Transfer ${status}`)
   }
@@ -116,16 +163,30 @@ export function TransferPanel({
               </div>
               <div className="space-y-2">
                 <Label>Guest</Label>
-                <Select value={newTransfer.guestId} onValueChange={(v) => updateField("guestId", v ?? "")} items={guests.map((g) => ({ value: g.id, label: g.full_name }))}>
+                <Select value={newTransfer.guestId} onValueChange={(v) => { void handleGuestChange(v ?? "") }} items={guestOptions.map((g) => ({ value: g.id, label: g.full_name }))}>
                   <SelectTrigger className="w-full" data-invalid={!!fieldErrors.guestId || undefined}><SelectValue placeholder="Select guest" /></SelectTrigger>
                   <SelectContent>
-                    {guests.map((g) => (
+                    {guestOptions.map((g) => (
                       <SelectItem key={g.id} value={g.id}>{g.full_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {fieldErrors.guestId && <p className="text-sm text-destructive" role="alert">{fieldErrors.guestId}</p>}
               </div>
+              {guestBookings.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Link to stay (optional)</Label>
+                  <Select value={newTransfer.bookingId} onValueChange={(v) => updateField("bookingId", v ?? "")} items={[{ value: "none", label: "Not linked" }, ...guestBookings.map((b) => ({ value: b.id, label: `${b.check_in} – ${b.check_out}` }))]}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Not linked" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not linked</SelectItem>
+                      {guestBookings.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.check_in} – {b.check_out}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Direction</Label>
                 <Select value={newTransfer.direction} onValueChange={(v) => updateField("direction", (v ?? "arrival"))} items={[{ value: "arrival", label: "Arrival (Airport → Hotel)" }, { value: "departure", label: "Departure (Hotel → Airport)" }]}>
@@ -178,7 +239,7 @@ export function TransferPanel({
                     )}
                   </TableCell>
                   <TableCell>{t.flight_number ?? "—"}</TableCell>
-                  <TableCell>{new Date(t.transfer_datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</TableCell>
+                  <TableCell>{formatHotelTime(t.transfer_datetime)}</TableCell>
                   <TableCell>{t.route?.airport_name}</TableCell>
                   <TableCell>
                     <Badge variant={t.status === "scheduled" ? "outline" : t.status === "completed" ? "default" : "destructive"}>

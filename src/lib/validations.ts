@@ -15,6 +15,8 @@ export const guestSchema = z.object({
     .min(5, "NIC/Passport number is required")
     .regex(/^[A-Za-z0-9\-]+$/, "NIC/Passport can only contain letters, numbers, and hyphens")
     .max(20, "NIC/Passport must be 20 characters or less"),
+  // bk05: party size collected on step 4 (pre-filled from the hero `guests` param)
+  numGuests: z.coerce.number().int().min(1, "At least 1 guest").max(20, "Maximum 20 guests"),
 })
 
 export const dateStepSchema = z.object({
@@ -143,9 +145,18 @@ export const equipmentRentalSchema = z.object({
 export const transferSchema = z.object({
   routeId: z.string().min(1, "Route is required"),
   guestId: z.string().min(1, "Guest is required"),
+  bookingId: z.string().uuid().optional().or(z.literal("")),
   direction: z.enum(["arrival", "departure"]),
   flightNumber: z.string().max(50, "Flight number must be 50 characters or less").optional().or(z.literal("")),
   datetime: z.string().min(1, "Date and time is required"),
+})
+
+export const roomCategorySchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name must be 100 characters or less"),
+  description: z.string().max(2000).optional().or(z.literal("")),
+  maxOccupancy: z.number().int().min(1, "Occupancy must be at least 1").max(20),
+  basePriceUsd: z.number().min(0, "Price must be 0 or higher"),
+  imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
 })
 
 export const recordPaymentSchema = z.object({

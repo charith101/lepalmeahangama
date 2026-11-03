@@ -5,6 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Canonical URL segment for a room category, shared by links and the sitemap. */
+export function roomSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
 }

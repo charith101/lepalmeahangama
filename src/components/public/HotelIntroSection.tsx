@@ -15,7 +15,7 @@ const cards = [
   {
     title: "Events & Gatherings",
     image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=1000&auto=format&fit=crop",
-    href: "/events",
+    href: "/dine",
   },
 ]
 
@@ -29,7 +29,7 @@ export function HotelIntroSection() {
         <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed max-w-2xl mx-auto mb-8">
           A charming boutique property in the serene coastal town of Ahangama,
           where lush gardens, a sun terrace, and warm Sri Lankan hospitality
-          come together for a peaceful stay near Kabalana Beach.
+          come together for a peaceful stay near Ahangama Beach.
         </p>
         <Link
           href="/contact"

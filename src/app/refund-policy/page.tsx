@@ -1,9 +1,12 @@
 import type { Metadata } from "next"
+import { HOTEL_EMAIL } from "@/lib/constants"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Refund Policy",
   description: "Read the cancellation and refund policy for bookings at Le Palme Ahangama, a boutique hotel in Ahangama, Sri Lanka.",
-}
+  path: "/refund-policy",
+})
 
 export default function RefundPolicyPage() {
   return (
@@ -92,10 +95,10 @@ export default function RefundPolicyPage() {
                 If you have any questions or concerns regarding our refund policy,
                 please contact us at{" "}
                 <a
-                  href="mailto:lepalmeahangama@protonmail.com"
+                  href={`mailto:${HOTEL_EMAIL}`}
                   className="text-stone-900 dark:text-stone-100 underline underline-offset-4 hover:opacity-70 transition-opacity"
                 >
-                  lepalmeahangama@protonmail.com
+                  {HOTEL_EMAIL}
                 </a>
                 . We are here to assist you and ensure your stay with us is enjoyable
                 and hassle-free.

@@ -13,12 +13,14 @@ export default function LoginPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
+  const [formError, setFormError] = useState<string | null>(null)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setFieldErrors({})
+    setFormError(null)
 
     const result = loginSchema.safeParse({ email, password })
     if (!result.success) {
@@ -34,6 +36,7 @@ export default function LoginPage() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email: result.data.email, password: result.data.password })
     if (error) {
+      setFormError("Invalid credentials")
       toast.error("Invalid credentials")
       setLoading(false)
       return
@@ -71,6 +74,7 @@ export default function LoginPage() {
           />
           {fieldErrors.password && <p id="password-error" className="text-sm text-destructive" role="alert">{fieldErrors.password}</p>}
         </div>
+        {formError && <p className="text-sm text-destructive" role="alert">{formError}</p>}
         <Button type="submit" disabled={loading}>
           {loading ? "Signing in…" : "Sign In"}
         </Button>

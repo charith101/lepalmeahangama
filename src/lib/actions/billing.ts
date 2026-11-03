@@ -28,13 +28,56 @@ export async function postCharge(bookingId: string, data: {
     quantity: data.quantity,
     unit_price_usd: data.unit_price_usd,
     line_total_usd: lineTotal,
+    added_by_staff_id: auth.user.id,
   })
   if (error) return { error: error.message }
   revalidatePath(`/dashboard/bookings/${bookingId}`)
   return { data: null }
 }
 
-export async function generateInvoice(bookingId: string) {
+export async function updateCharge(chargeId: string, data: {
+  description: string; category: string; quantity: number; unit_price_usd?: number; unitPrice?: number
+}) {
+  const auth = await requireStaff()
+  if ("error" in auth) return { error: auth.error }
+  const result = chargeSchema.safeParse({
+    description: data.description,
+    category: data.category,
+    quantity: data.quantity,
+    unitPrice: data.unit_price_usd ?? data.unitPrice,
+  })
+  if (!result.success) return { error: result.error.issues.map((i) => i.message).join("; ") }
+
+  const supabase = await createServerClient()
+  const { data: charge } = await supabase
+    .from("booking_charges").select("booking_id").eq("id", chargeId).maybeSingle()
+
+  const lineTotal = result.data.quantity * result.data.unitPrice
+  const { error } = await supabase.from("booking_charges").update({
+    description: result.data.description,
+    category: result.data.category,
+    quantity: result.data.quantity,
+    unit_price_usd: result.data.unitPrice,
+    line_total_usd: lineTotal,
+  }).eq("id", chargeId)
+  if (error) return { error: error.message }
+  if (charge) revalidatePath(`/dashboard/bookings/${charge.booking_id}`)
+  return { data: null }
+}
+
+export async function deleteCharge(chargeId: string) {
+  const auth = await requireStaff()
+  if ("error" in auth) return { error: auth.error }
+  const supabase = await createServerClient()
+  const { data: charge } = await supabase
+    .from("booking_charges").select("booking_id").eq("id", chargeId).maybeSingle()
+  const { error } = await supabase.from("booking_charges").delete().eq("id", chargeId)
+  if (error) return { error: error.message }
+  if (charge) revalidatePath(`/dashboard/bookings/${charge.booking_id}`)
+  return { data: null }
+}
+
+export async function generateInvoice(bookingId: string, force = false) {
   const auth = await requireStaff()
   if ("error" in auth) return { error: auth.error }
   const supabase = await createServerClient()
@@ -65,6 +108,10 @@ export async function generateInvoice(bookingId: string) {
 
   const { data: existing } = await supabase
     .from("invoices").select("id").eq("booking_id", bookingId).maybeSingle()
+
+  if (existing && !force) {
+    return { error: "An invoice was already issued for this booking." }
+  }
 
   if (existing) {
     const { error } = await supabase.from("invoices").update({
@@ -121,7 +168,19 @@ export async function recordPayment(bookingId: string, data: {
   if (error) return { error: error.message }
 
   if (data.invoice_id) {
-    await supabase.from("invoices").update({ status: "paid" }).eq("id", data.invoice_id)
+    // Mark paid only when completed payments cover the grand total; a genuinely
+    // paid invoice is never downgraded by a later (partial) payment.
+    const { data: invoice } = await supabase
+      .from("invoices").select("grand_total_usd, status").eq("id", data.invoice_id).maybeSingle()
+    const { data: paidRows } = await supabase
+      .from("payments").select("amount_usd").eq("booking_id", bookingId).eq("status", "completed")
+    const paidTotal = (paidRows || []).reduce((s, r) => s + Number(r.amount_usd || 0), 0)
+    const grandTotal = Number(invoice?.grand_total_usd || 0)
+    if (invoice && paidTotal >= grandTotal) {
+      await supabase.from("invoices").update({ status: "paid" }).eq("id", data.invoice_id)
+    } else if (invoice && invoice.status !== "paid") {
+      await supabase.from("invoices").update({ status: "issued" }).eq("id", data.invoice_id)
+    }
   }
 
   revalidatePath(`/dashboard/bookings/${bookingId}`)

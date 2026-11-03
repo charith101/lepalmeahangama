@@ -24,14 +24,14 @@ export function RoomShowcase() {
           <div className="relative aspect-[21/9] overflow-hidden bg-stone-200 dark:bg-stone-800 mb-4">
             <img
               src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=2070&auto=format&fit=crop"
-              alt="Deluxe Beach Room at Le Palme Ahangama"
+              alt="Deluxe Room at Le Palme Ahangama"
               className="w-full h-full object-cover"
             />
           </div>
         </AnimatedSection>
         <AnimatedSection delay={300}>
           <p className="text-stone-500 dark:text-stone-400 text-xs font-sans tracking-wide">
-            Deluxe Beach Room — Ocean view with private balcony
+            Deluxe Room — Private balcony with garden views
           </p>
         </AnimatedSection>
       </div>

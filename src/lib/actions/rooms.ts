@@ -3,7 +3,7 @@
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import type { Database } from "@/lib/supabase/database.types"
-import { requireStaff } from "@/lib/auth"
+import { requireAnyStaff, requireStaff } from "@/lib/auth"
 
 export async function getRoomCategories() {
   const supabase = await createServerClient()
@@ -93,17 +93,28 @@ export async function moveGuestToRoom(bookingId: string, newRoomId: string) {
     return { error: "Selected room is occupied during those dates" }
   }
 
+  const { data: room } = await supabase
+    .from("rooms")
+    .select("room_categories(base_price_usd)")
+    .eq("id", newRoomId)
+    .single()
+  const basePrice = Number(room?.room_categories?.base_price_usd ?? 0)
+  const nights = Math.max(1, Math.round(
+    (new Date(booking.check_out).getTime() - new Date(booking.check_in).getTime()) / (1000 * 60 * 60 * 24)
+  ))
+  const roomTotalUsd = basePrice * nights
+
   const { error } = await supabase
     .from("bookings")
-    .update({ room_id: newRoomId })
+    .update({ room_id: newRoomId, room_total_usd: roomTotalUsd })
     .eq("id", bookingId)
   if (error) return { error: error.message }
   revalidatePath(`/dashboard/bookings/${bookingId}`)
-  return { data: null }
+  return { data: { room_total_usd: roomTotalUsd } }
 }
 
 export async function updateRoomHousekeepingStatus(roomId: string, status: Database["public"]["Enums"]["room_housekeeping_status"]) {
-  const auth = await requireStaff()
+  const auth = await requireAnyStaff()
   if ("error" in auth) return { error: auth.error }
   const supabase = await createServerClient()
   const { error } = await supabase

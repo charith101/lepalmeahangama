@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { format, addDays, differenceInDays } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -15,8 +15,21 @@ const statusColors: Record<string, string> = {
   pending_payment: "bg-secondary text-secondary-foreground",
   confirmed: "bg-primary/10 text-primary",
   checked_in: "bg-primary text-primary-foreground",
+  checked_out: "bg-secondary/50 text-secondary-foreground",
   maintenance_block: "bg-muted text-muted-foreground",
+  cancelled: "bg-muted/40 text-muted-foreground line-through",
+  no_show: "bg-muted/60 text-muted-foreground border-dashed border-border",
 }
+
+const STATUS_OPTIONS: Array<{ key: string; label: string }> = [
+  { key: "pending_payment", label: "Pending payment" },
+  { key: "confirmed", label: "Confirmed" },
+  { key: "checked_in", label: "Checked in" },
+  { key: "checked_out", label: "Checked out" },
+  { key: "cancelled", label: "Cancelled" },
+  { key: "no_show", label: "No show" },
+  { key: "maintenance_block", label: "Maintenance" },
+]
 
 interface BookingRow {
   id: string
@@ -60,6 +73,8 @@ export function CalendarGrid({
       }),
     [startDate],
   )
+
+  const [visible, setVisible] = useState<string[]>(STATUS_OPTIONS.map((s) => s.key))
 
   const bookingsByRoom = useMemo(() => {
     const map = new Map<string, BookingRow[]>()
@@ -140,7 +155,7 @@ export function CalendarGrid({
     }
 
     const room = row.room
-    const roomBookings = bookingsByRoom.get(room.id) ?? []
+    const roomBookings = (bookingsByRoom.get(room.id) ?? []).filter((b) => visible.includes(b.status))
 
     gridChildren.push(
       <div
@@ -209,14 +224,46 @@ export function CalendarGrid({
   }
 
   return (
-    <div className="overflow-auto rounded-lg border">
-      <div
-        className="grid min-w-[900px]"
-        style={{
-          gridTemplateColumns: `180px repeat(30, minmax(48px, 1fr))`,
-        }}
-      >
-        {gridChildren}
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+        {STATUS_OPTIONS.map((s) => {
+          const on = visible.includes(s.key)
+          return (
+            <button
+              key={s.key}
+              type="button"
+              aria-pressed={on}
+              onClick={() =>
+                setVisible((v) => (v.includes(s.key) ? v.filter((k) => k !== s.key) : [...v, s.key]))
+              }
+              className={cn(
+                "flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs text-muted-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                !on && "line-through opacity-40",
+              )}
+            >
+              <span className={cn("size-2.5 rounded-sm border", statusColors[s.key] ?? "bg-muted")} />
+              {s.label}
+            </button>
+          )
+        })}
+      </div>
+      <div className="overflow-auto rounded-lg border">
+        <div
+          className="grid min-w-[900px]"
+          style={{
+            gridTemplateColumns: `180px repeat(30, minmax(48px, 1fr))`,
+          }}
+        >
+          {gridChildren}
+        </div>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {STATUS_OPTIONS.map((s) => (
+          <span key={s.key} className="flex items-center gap-1.5">
+            <span className={cn("size-2.5 rounded-sm border", statusColors[s.key] ?? "bg-muted")} />
+            {s.label}
+          </span>
+        ))}
       </div>
     </div>
   )

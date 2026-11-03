@@ -1,5 +1,7 @@
 # Le Palme Ahangama — Hotel PMS
 
+You should Understand, obey and act accoridng to the prompt given in each session.
+
 ## Important - Must Do
 - Make as many subagents as required and do the implementation accurately.
 - Loop over a plan until you get the correct, accurate output.

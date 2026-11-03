@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { CalendarIcon, Trash2Icon, PlusIcon } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { CalendarIcon, Trash2Icon, PlusIcon, XIcon } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cn, rentalDays } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { dashboardBookingSchema } from "@/lib/validations"
+import { getGuest } from "@/lib/actions/guests"
 import { BOARD_PLANS, BOARD_PRICE_PER_NIGHT, EQUIPMENT_SURFBOARD, EQUIPMENT_BICYCLE, MOTORBIKE_CATEGORIES, CAR_CATEGORIES, surfboardTotalForDays, SURFBOARD_TIERS, type BoardPlan } from "@/lib/constants"
 
 type Category = { id: string; name: string; base_price_usd: number }
@@ -52,9 +53,19 @@ function QtyStepper({ value, onChange, max = 20 }: { value: number; onChange: (v
   )
 }
 
+type SelectedGuest = {
+  id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+  nationality: string | null
+  nic_or_passport: string | null
+}
+
 export function BookingForm({ categories, rooms }: { categories: Category[]; rooms: Room[] }) {
   const router = useRouter()
   const supabase = createClient()
+  const searchParams = useSearchParams()
 
   type RoomSelection = { roomId: string; roomNumber: string; categoryName: string; basePrice: number }
   const [checkIn, setCheckIn] = useState<Date | undefined>()
@@ -62,7 +73,10 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
   const [roomSelections, setRoomSelections] = useState<RoomSelection[]>([])
   const [addCategoryId, setAddCategoryId] = useState<string | null>(null)
   const [addRoomId, setAddRoomId] = useState<string | null>(null)
-  const [source, setSource] = useState<string | null>("walk_in")
+  const [source, setSource] = useState<string | null>(searchParams.get("source") === "ota_manual" ? "ota_manual" : "walk_in")
+  const [guestId, setGuestId] = useState<string | null>(searchParams.get("guestId"))
+  const [selectedGuest, setSelectedGuest] = useState<SelectedGuest | null>(null)
+  const [loadingGuest, setLoadingGuest] = useState(false)
   const [otaName, setOtaName] = useState("")
   const [guestName, setGuestName] = useState("")
   const [guestEmail, setGuestEmail] = useState("")
@@ -112,6 +126,37 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
     }
     loadPricing()
   }, [])
+
+  useEffect(() => {
+    if (!guestId) return
+    let ignore = false
+    const load = async () => {
+      setLoadingGuest(true)
+      try {
+        const res = await getGuest(guestId)
+        if (ignore) return
+        if ("error" in res) {
+          toast.error(res.error || "Guest not found")
+          setGuestId(null)
+        } else {
+          setSelectedGuest(res.data)
+        }
+      } finally {
+        if (!ignore) setLoadingGuest(false)
+      }
+    }
+    load()
+    return () => { ignore = true }
+  }, [guestId])
+
+  function clearSelectedGuest() {
+    setGuestId(null)
+    setSelectedGuest(null)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("guestId")
+    const qs = params.toString()
+    router.replace(`/dashboard/bookings/new${qs ? `?${qs}` : ""}`)
+  }
 
   useEffect(() => {
     if (!checkIn || !checkOut || checkOut <= checkIn) return
@@ -166,7 +211,12 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
     }
     const result = dashboardBookingSchema.safeParse({
       checkIn, checkOut, roomId: roomSelections[0].roomId, source, otaName,
-      guestName, guestEmail, guestPhone, guestNationality, guestNicPassport, notes, numGuests,
+      guestName: selectedGuest?.full_name ?? guestName,
+      guestEmail: selectedGuest?.email ?? guestEmail,
+      guestPhone: selectedGuest?.phone ?? guestPhone,
+      guestNationality: selectedGuest?.nationality ?? guestNationality,
+      guestNicPassport: selectedGuest?.nic_or_passport ?? guestNicPassport,
+      notes, numGuests,
     })
     if (!result.success) {
       const errs: Record<string, string> = {}
@@ -243,24 +293,29 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
   }
 
   async function handleSubmit() {
-    if (!validate()) return
+    if (loadingGuest || !validate()) return
     setSubmitting(true)
 
     try {
-      const guestResult = await supabase
-        .from("guests")
-        .insert({
-          full_name: guestName.trim(),
-          email: guestEmail.trim() || null,
-          phone: guestPhone.trim() || null,
-          nationality: guestNationality.trim() || null,
-          nic_or_passport: guestNicPassport.trim() || null,
-        })
-        .select("id")
-        .single()
+      let guestIdOut: string
+      if (selectedGuest) {
+        guestIdOut = selectedGuest.id
+      } else {
+        const guestResult = await supabase
+          .from("guests")
+          .insert({
+            full_name: guestName.trim(),
+            email: guestEmail.trim() || null,
+            phone: guestPhone.trim() || null,
+            nationality: guestNationality.trim() || null,
+            nic_or_passport: guestNicPassport.trim() || null,
+          })
+          .select("id")
+          .single()
 
-      if (guestResult.error) throw new Error(guestResult.error.message)
-      const guestId = guestResult.data.id
+        if (guestResult.error) throw new Error(guestResult.error.message)
+        guestIdOut = guestResult.data.id
+      }
 
       const { data: user } = await supabase.auth.getUser()
 
@@ -288,7 +343,7 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
         const { data: booking, error: bookingError } = await supabase
           .from("bookings")
           .insert({
-            guest_id: guestId,
+            guest_id: guestIdOut,
             room_id: sel.roomId,
             check_in: format(checkIn!, "yyyy-MM-dd"),
             check_out: format(checkOut!, "yyyy-MM-dd"),
@@ -320,16 +375,16 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
           (checkOut!.getTime() - checkIn!.getTime()) / (1000 * 60 * 60 * 24)
         )))
         const surfboardTotal = surfboardTotalForDays(surfboardDays, prices[EQUIPMENT_SURFBOARD], SURFBOARD_TIERS) * surfboardQty
-        await insertEquipment(EQUIPMENT_SURFBOARD, surfboardQty, surfboardStart, surfboardEnd, prices[EQUIPMENT_SURFBOARD], guestId, bookingIds[0], surfboardTotal)
+        await insertEquipment(EQUIPMENT_SURFBOARD, surfboardQty, surfboardStart, surfboardEnd, prices[EQUIPMENT_SURFBOARD], guestIdOut, bookingIds[0], surfboardTotal)
       }
       if (bicycleQty > 0) {
-        await insertEquipment(EQUIPMENT_BICYCLE, bicycleQty, bicycleStart, bicycleEnd, prices[EQUIPMENT_BICYCLE], guestId, bookingIds[0])
+        await insertEquipment(EQUIPMENT_BICYCLE, bicycleQty, bicycleStart, bicycleEnd, prices[EQUIPMENT_BICYCLE], guestIdOut, bookingIds[0])
       }
       if (motorbikeModel) {
-        await insertEquipment(motorbikeModel, motorbikeQty, motorbikeStart, motorbikeEnd, prices[motorbikeModel], guestId, bookingIds[0])
+        await insertEquipment(motorbikeModel, motorbikeQty, motorbikeStart, motorbikeEnd, prices[motorbikeModel], guestIdOut, bookingIds[0])
       }
       if (carModel) {
-        await insertEquipment(carModel, carQty, carStart, carEnd, prices[carModel], guestId, bookingIds[0])
+        await insertEquipment(carModel, carQty, carStart, carEnd, prices[carModel], guestIdOut, bookingIds[0])
       }
 
       toast.success(`Booking created${roomSelections.length > 1 ? ` (${roomSelections.length} rooms)` : ""}`)
@@ -601,31 +656,50 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
 
         <div className="space-y-3">
           <Label className="text-base">Guest</Label>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div className="space-y-2" data-invalid={!!fieldErrors.guestName || undefined}>
-              <Label>Full Name *</Label>
-              <Input value={guestName} onChange={(e) => { setGuestName(e.target.value); setFieldErrors((p) => ({ ...p, guestName: "" })) }} placeholder="Guest name" aria-invalid={!!fieldErrors.guestName} />
-              {fieldErrors.guestName && <p className="text-sm text-destructive" role="alert">{fieldErrors.guestName}</p>}
+          {selectedGuest ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary bg-primary/10 px-3 py-1 text-sm">
+                Booking for <span className="font-medium">{selectedGuest.full_name}</span>
+                <button
+                  type="button"
+                  onClick={clearSelectedGuest}
+                  aria-label="Clear selected guest"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <XIcon className="size-3.5" />
+                </button>
+              </span>
+              {selectedGuest.email && <span className="text-sm text-muted-foreground">{selectedGuest.email}</span>}
             </div>
-            <div className="space-y-2" data-invalid={!!fieldErrors.guestEmail || undefined}>
-              <Label>Email</Label>
-              <Input type="email" value={guestEmail} onChange={(e) => { setGuestEmail(e.target.value); setFieldErrors((p) => ({ ...p, guestEmail: "" })) }} placeholder="guest@example.com" aria-invalid={!!fieldErrors.guestEmail} />
-              {fieldErrors.guestEmail && <p className="text-sm text-destructive" role="alert">{fieldErrors.guestEmail}</p>}
+          ) : loadingGuest && guestId ? (
+            <p className="text-sm text-muted-foreground">Loading guest...</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-2" data-invalid={!!fieldErrors.guestName || undefined}>
+                <Label>Full Name *</Label>
+                <Input value={guestName} onChange={(e) => { setGuestName(e.target.value); setFieldErrors((p) => ({ ...p, guestName: "" })) }} placeholder="Guest name" aria-invalid={!!fieldErrors.guestName} />
+                {fieldErrors.guestName && <p className="text-sm text-destructive" role="alert">{fieldErrors.guestName}</p>}
+              </div>
+              <div className="space-y-2" data-invalid={!!fieldErrors.guestEmail || undefined}>
+                <Label>Email</Label>
+                <Input type="email" value={guestEmail} onChange={(e) => { setGuestEmail(e.target.value); setFieldErrors((p) => ({ ...p, guestEmail: "" })) }} placeholder="guest@example.com" aria-invalid={!!fieldErrors.guestEmail} />
+                {fieldErrors.guestEmail && <p className="text-sm text-destructive" role="alert">{fieldErrors.guestEmail}</p>}
+              </div>
+              <div className="space-y-2 sm:col-span-2" data-invalid={!!fieldErrors.guestPhone || undefined}>
+                <Label>Phone</Label>
+                <Input value={guestPhone} onChange={(e) => { setGuestPhone(e.target.value); setFieldErrors((p) => ({ ...p, guestPhone: "" })) }} placeholder="+94 XXX XXX XXX" aria-invalid={!!fieldErrors.guestPhone} />
+                {fieldErrors.guestPhone && <p className="text-sm text-destructive" role="alert">{fieldErrors.guestPhone}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label>Nationality</Label>
+                <Input value={guestNationality} onChange={(e) => setGuestNationality(e.target.value)} placeholder="e.g. Sri Lankan" />
+              </div>
+              <div className="space-y-2">
+                <Label>NIC / Passport</Label>
+                <Input value={guestNicPassport} onChange={(e) => setGuestNicPassport(e.target.value)} placeholder="NIC or passport number" />
+              </div>
             </div>
-            <div className="space-y-2 sm:col-span-2" data-invalid={!!fieldErrors.guestPhone || undefined}>
-              <Label>Phone</Label>
-              <Input value={guestPhone} onChange={(e) => { setGuestPhone(e.target.value); setFieldErrors((p) => ({ ...p, guestPhone: "" })) }} placeholder="+94 XXX XXX XXX" aria-invalid={!!fieldErrors.guestPhone} />
-              {fieldErrors.guestPhone && <p className="text-sm text-destructive" role="alert">{fieldErrors.guestPhone}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label>Nationality</Label>
-              <Input value={guestNationality} onChange={(e) => setGuestNationality(e.target.value)} placeholder="e.g. Sri Lankan" />
-            </div>
-            <div className="space-y-2">
-              <Label>NIC / Passport</Label>
-              <Input value={guestNicPassport} onChange={(e) => setGuestNicPassport(e.target.value)} placeholder="NIC or passport number" />
-            </div>
-          </div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -638,8 +712,8 @@ export function BookingForm({ categories, rooms }: { categories: Category[]; roo
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any special requests or notes..." rows={3} />
         </div>
 
-        <Button onClick={handleSubmit} disabled={submitting} className="w-full">
-          {submitting ? "Creating..." : "Create Booking"}
+        <Button onClick={handleSubmit} disabled={submitting || loadingGuest} className="w-full">
+          {submitting ? "Creating..." : loadingGuest ? "Loading guest..." : "Create Booking"}
         </Button>
       </CardContent>
     </Card>

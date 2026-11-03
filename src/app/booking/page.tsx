@@ -1,10 +1,11 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { BookingWizard } from "@/components/public/BookingWizard"
 
 export const metadata: Metadata = {
   title: "Check Availability & Book",
-  description: "Select dates, choose your room, add extras, and book your stay at Le Palme Ahangama — a boutique hotel near Kabalana Beach.",
+  description: "Select dates, choose your room, add extras, and book your stay at Le Palme Ahangama — a boutique hotel near Ahangama Beach.",
   robots: { index: false, follow: true },
 }
 
@@ -16,7 +17,7 @@ const MOTORBIKE_NAMES = new Set([
 const CAR_PREFIX = "Car — "
 
 export default async function BookingPage(props: {
-  searchParams: Promise<{ categoryId?: string; checkIn?: string; checkOut?: string }>
+  searchParams: Promise<{ categoryId?: string; checkIn?: string; checkOut?: string; guests?: string; payment?: string }>
 }) {
   if (process.env.NEXT_PUBLIC_BOOKING_ENABLED === "false") {
     return (
@@ -83,12 +84,21 @@ export default async function BookingPage(props: {
             Book Your Stay
           </h1>
         </div>
+        {searchParams.payment === "cancelled" && (
+          <div role="alert" className="mb-8 border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 p-4 text-sm font-sans text-red-600 dark:text-red-400 flex items-center justify-between gap-3">
+            <span>Payment cancelled — your booking is not confirmed.</span>
+            <Link href="/booking" className="font-medium underline underline-offset-2 shrink-0 hover:text-red-700 dark:hover:text-red-300 transition-colors">
+              Retry booking
+            </Link>
+          </div>
+        )}
         <BookingWizard
           categories={categories}
           pricing={pricing}
           defaultCategoryId={searchParams.categoryId}
           defaultCheckIn={searchParams.checkIn}
           defaultCheckOut={searchParams.checkOut}
+          defaultGuests={searchParams.guests}
         />
       </div>
     </div>

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sheet"
 import { createClient } from "@/lib/supabase/client"
 import type { Database } from "@/lib/supabase/database.types"
+import { checkOut } from "@/lib/actions/bookings"
 import { formatCurrency } from "@/lib/utils"
 
 type BookingRow = Database["public"]["Tables"]["bookings"]["Row"]
@@ -99,11 +100,8 @@ export function QuickCheckoutSheet() {
         if (payErr) throw payErr
       }
 
-      const { error: bookErr } = await supabase
-        .from("bookings")
-        .update({ status: "checked_out" })
-        .eq("id", selectedId)
-      if (bookErr) throw bookErr
+      const { error: bookErr } = await checkOut(selectedId)
+      if (bookErr) throw new Error(bookErr)
 
       toast.success("Guest checked out")
       setOpen(false)
@@ -164,6 +162,12 @@ export function QuickCheckoutSheet() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Surcharge ({surchargePct}%)</span>
                     <span>{formatCurrency((roomTotal + addonTotal) * surchargePct / 100)}</span>
+                  </div>
+                )}
+                {invoiceData && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Invoice status</span>
+                    <span className="capitalize">{invoiceData.status}</span>
                   </div>
                 )}
                 <Separator />

@@ -4,14 +4,50 @@ import { Button } from "@/components/ui/button"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
+import { BOOKING_STATUSES } from "@/lib/constants"
+import { BookingsFilters } from "@/components/dashboard/BookingsFilters"
 
-export default async function BookingsPage() {
+const PAGE_SIZE = 50
+
+export default async function BookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>
+}) {
+  const { status, q, page: pageParam } = await searchParams
   const supabase = await createClient()
-  const { data: bookings } = await supabase
+
+  const statusFilter = BOOKING_STATUSES.includes(status as (typeof BOOKING_STATUSES)[number])
+    ? (status as (typeof BOOKING_STATUSES)[number])
+    : undefined
+  const sanitizedQ = (q ?? "").replace(/[%_,()]/g, "").trim()
+  const pageNum = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1)
+  const from = (pageNum - 1) * PAGE_SIZE
+
+  let builder = supabase
     .from("bookings")
-    .select("id, check_in, check_out, status, room_total_usd, source, created_at, guests!inner(full_name)")
+    .select(
+      "id, check_in, check_out, status, room_total_usd, source, created_at, guests!inner(full_name, email)",
+      { count: "exact" }
+    )
     .order("created_at", { ascending: false })
-    .limit(50)
+    .range(from, from + PAGE_SIZE - 1)
+  if (statusFilter) builder = builder.eq("status", statusFilter)
+  if (sanitizedQ) builder = builder.or(`guests.full_name.ilike.%${sanitizedQ}%,guests.email.ilike.%${sanitizedQ}%`)
+
+  const { data: bookings, count } = await builder
+  const total = count ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const hasFilters = !!statusFilter || !!sanitizedQ
+
+  const pageHref = (p: number) => {
+    const params = new URLSearchParams()
+    if (statusFilter) params.set("status", statusFilter)
+    if (q) params.set("q", q)
+    if (p > 1) params.set("page", String(p))
+    const qs = params.toString()
+    return `/dashboard/bookings${qs ? `?${qs}` : ""}`
+  }
 
   return (
     <div className="space-y-6">
@@ -22,6 +58,8 @@ export default async function BookingsPage() {
         </div>
         <Button render={<Link href="/dashboard/bookings/new" />}>New Booking</Button>
       </div>
+
+      <BookingsFilters rows={bookings ?? []} />
 
       <Table>
         <TableHeader>
@@ -39,7 +77,7 @@ export default async function BookingsPage() {
           {!bookings?.length && (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
-                No bookings yet.
+                {hasFilters ? "No bookings match your filters." : "No bookings yet."}
               </TableCell>
             </TableRow>
           )}
@@ -60,6 +98,30 @@ export default async function BookingsPage() {
           ))}
         </TableBody>
       </Table>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Page {Math.min(pageNum, totalPages)} of {totalPages} · {total} booking{total === 1 ? "" : "s"}
+          </p>
+          <div className="flex gap-2">
+            {pageNum > 1 ? (
+              <Button variant="outline" size="sm" render={<Link href={pageHref(pageNum - 1)} />}>
+                Previous
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" disabled>Previous</Button>
+            )}
+            {pageNum < totalPages ? (
+              <Button variant="outline" size="sm" render={<Link href={pageHref(pageNum + 1)} />}>
+                Next
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" disabled>Next</Button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

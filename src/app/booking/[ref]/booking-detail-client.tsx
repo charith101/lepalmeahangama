@@ -1,11 +1,13 @@
 "use client"
 
 import { format, parseISO } from "date-fns"
-import { Palmtree, CalendarDays, User, MapPin, Phone, Mail, Hash, FileText, Utensils, Bike } from "lucide-react"
+import Image from "next/image"
+import { CalendarDays, User, MapPin, Phone, Mail, Hash, FileText, Utensils, Bike } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
 import { BOARD_LABEL } from "@/lib/constants"
+import { formatHotelDateTime } from "@/lib/datetime"
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   pending_payment: { label: "Pending Payment", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
@@ -55,7 +57,15 @@ type BookingData = Record<string, any> & {
   }> | null
 }
 
-export function BookingDetailClient({ bookings }: { bookings: BookingData[] }) {
+export function BookingDetailClient({
+  bookings,
+  grandTotal = null,
+  stayTimes = "",
+}: {
+  bookings: BookingData[]
+  grandTotal?: number | null
+  stayTimes?: string
+}) {
   const guest = bookings[0]?.guests
   const refCode = bookings[0]?.group_booking_id?.slice(0, 8).toUpperCase() ?? "—"
 
@@ -73,7 +83,13 @@ export function BookingDetailClient({ bookings }: { bookings: BookingData[] }) {
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-2">
-            <Palmtree className="size-5 text-ink dark:text-on-primary" />
+            <Image
+              src="/images/IMG_1457.png"
+              alt="Le Palme logo"
+              width={378}
+              height={334}
+              className="h-6 w-auto"
+            />
             <p className="text-xs font-medium tracking-[0.18em] uppercase text-muted-foreground">
               Le Palme Ahangama
             </p>
@@ -84,12 +100,14 @@ export function BookingDetailClient({ bookings }: { bookings: BookingData[] }) {
           <p className="text-sm text-muted-foreground mt-1">
             Reference: <span className="font-mono font-medium text-ink dark:text-on-primary tracking-wider">{refCode}</span>
           </p>
+          {stayTimes && <p className="text-xs text-muted-foreground mt-1">{stayTimes}</p>}
         </div>
 
         {bookings.map((booking) => {
           const statusInfo = statusLabels[booking.status] ?? { label: booking.status, color: "bg-gray-100 text-gray-800" }
           const checkInDate = booking.check_in ? format(parseISO(booking.check_in), "PPP") : "—"
           const checkOutDate = booking.check_out ? format(parseISO(booking.check_out), "PPP") : "—"
+          const guestCount = booking.num_guests ?? 1
 
           return (
             <Card key={booking.id} className="mb-4">
@@ -134,7 +152,7 @@ export function BookingDetailClient({ bookings }: { bookings: BookingData[] }) {
                       <User className="size-4 shrink-0" />
                       <div>
                         <p className="font-medium text-ink dark:text-on-primary">Guests</p>
-                        <p>{booking.num_guests ?? 1} guest{booking.num_guests !== 1 ? "s" : ""}</p>
+                        <p>{guestCount} guest{guestCount === 1 ? "" : "s"}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -192,7 +210,7 @@ export function BookingDetailClient({ bookings }: { bookings: BookingData[] }) {
                   <div key={`${b.id}-${t.transfer_datetime}`} className="flex items-center justify-between gap-2 text-sm">
                     <span className="flex items-center gap-2 text-muted-foreground capitalize">
                       <MapPin className="size-4 shrink-0" />
-                      Transfer ({t.direction}){t.flight_number ? ` &middot; ${t.flight_number}` : ""} &middot; {t.transfer_datetime}
+                      Transfer ({t.direction}){t.flight_number ? ` &middot; ${t.flight_number}` : ""} &middot; {formatHotelDateTime(t.transfer_datetime)}
                     </span>
                     <span className="text-ink dark:text-on-primary">{t.price_usd ? formatCurrency(t.price_usd) : "—"}</span>
                   </div>
@@ -232,6 +250,11 @@ export function BookingDetailClient({ bookings }: { bookings: BookingData[] }) {
           <p>
             Total room charges: <span className="font-semibold text-ink dark:text-on-primary">{formatCurrency(roomTotal)}</span>
           </p>
+          {grandTotal !== null && (
+            <p className="mt-1">
+              Grand Total: <span className="font-semibold text-ink dark:text-on-primary">{formatCurrency(grandTotal)}</span>
+            </p>
+          )}
           {bookings[0]?.notes && (
             <p className="mt-2 italic">{bookings[0].notes}</p>
           )}

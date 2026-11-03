@@ -1,10 +1,12 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Experiences",
   description: "Discover Ahangama — surfing, cycling, wildlife, and cultural experiences at Le Palme.",
-}
+  path: "/experiences",
+})
 
 const experiences = [
   {
@@ -33,9 +35,9 @@ const experiences = [
   },
   {
     title: "Skate Paths",
-    image: "https://images.unsplash.com/photo-1547447134-cd3f5c65ffc0?q=80&w=1000&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1520045892732-304bc3ac5d8e?q=80&w=1000&auto=format&fit=crop",
     description:
-      "Roll through Ahangama's smoothest coastal lanes and palm-shaded village paths on our guided skate tours. From relaxed rides along the shoreline near Kabalana Beach to longer routes winding through rice paddies and sleepy fishing villages, our team sets you up with boards, helmets, and the best local lines for every level. It's the most playful way to slow down, take in the southern coast, and feel the rhythm of daily life on four wheels.",
+      "Roll through Ahangama's smoothest coastal lanes and palm-shaded village paths on our guided skate tours. From relaxed rides along the shoreline near Ahangama Beach to longer routes winding through rice paddies and sleepy fishing villages, our team sets you up with boards, helmets, and the best local lines for every level. It's the most playful way to slow down, take in the southern coast, and feel the rhythm of daily life on four wheels.",
   },
 ]
 
@@ -74,7 +76,7 @@ export default function ExperiencesPage() {
                     {exp.description}
                   </p>
                   <Link
-                    href="/contact"
+                    href={`/contact?experience=${encodeURIComponent(exp.title)}`}
                     className="text-sm font-sans font-medium text-stone-900 dark:text-stone-100 border-b border-stone-900 dark:border-stone-100 pb-0.5 inline-block w-fit hover:opacity-60 transition-opacity"
                   >
                     Inquire About This Experience
@@ -97,7 +99,7 @@ export default function ExperiencesPage() {
 
           <div className="mt-24 text-center">
             <Link
-              href="/contact"
+              href="/contact?subject=Experience%20Enquiry"
               className="inline-block px-8 py-2.5 bg-stone-900 dark:bg-stone-800 text-white text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-700 transition-colors"
             >
               Plan Your Experience

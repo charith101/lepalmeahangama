@@ -24,7 +24,7 @@ export function ExperiencesSection() {
             </h2>
             <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed mb-6">
               Beyond our garden walls lies a world of discovery. Surf the breaks
-              at Kabalana Beach, roll along the coastal lanes on a skate
+              at Ahangama Beach, roll along the coastal lanes on a skate
               adventure, explore ancient temples, or cycle through emerald rice
               paddies at sunset. Our concierge team curates every experience
               with care.

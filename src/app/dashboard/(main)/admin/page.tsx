@@ -13,7 +13,6 @@ export default async function AdminPage() {
     supabase.from("equipment_units").select("*, category:equipment_categories(*)").order("unit_label"),
     supabase.from("maintenance_requests")
       .select("*, rooms(room_number, room_categories(name)), profiles!reported_by_staff_id(full_name)")
-      .not("status", "in", '("resolved","closed")')
       .order("created_at", { ascending: false }),
     supabase.from("contact_messages").select("*").order("created_at", { ascending: false }),
   ])

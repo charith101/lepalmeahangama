@@ -48,7 +48,12 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
 
   const checkAvailability = useCallback(async (categoryId: string, ci: string, co: string) => {
     const key = `${categoryId}_${ci}_${co}`
-    setAvail((prev) => ({ ...prev, [key]: { loading: true, count: null, error: null } }))
+    // §3.4 race: keep the last known count while refetching so the qty cap never
+    // disengages mid-load; if no count is known yet it stays null (control disabled).
+    setAvail((prev) => ({
+      ...prev,
+      [key]: { loading: true, count: prev[key]?.count ?? null, error: null },
+    }))
     const result = await getAvailableRooms(categoryId, ci, co)
     setAvail((prev) => ({
       ...prev,
@@ -424,9 +429,9 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
                             <span className="w-8 text-center text-base font-sans font-medium text-stone-900 dark:text-stone-100 tabular-nums">{sel!.quantity}</span>
                             <button
                               type="button"
-                              onClick={() => updateSelection(cat.id, { quantity: Math.min(a?.count ?? 99, sel!.quantity + 1) })}
+                              onClick={() => updateSelection(cat.id, { quantity: Math.min(a?.count ?? sel!.quantity, sel!.quantity + 1) })}
                               className="flex size-8 items-center justify-center border border-stone-200 dark:border-stone-800 text-sm hover:bg-stone-50 dark:hover:bg-stone-800 disabled:opacity-30 transition-colors"
-                              disabled={a !== undefined && a.count !== null && sel!.quantity >= a.count}
+                              disabled={!a || a.count === null || sel!.quantity >= a.count}
                             >
                               <Plus className="size-3.5" />
                             </button>
@@ -492,7 +497,7 @@ export function DateStep({ categories, onNext, onChange, defaultCategoryId, defa
         className="w-full py-2.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         disabled={selections.length === 0 || !datesValid || isAnyAvailabilityLoading}
       >
-        {!checkIn || !checkOut ? "Select dates to continue" : isAnyAvailabilityLoading ? "Checking availability..." : "Next: Add Extras"}
+        {!checkIn || !checkOut ? "Select dates to continue" : isAnyAvailabilityLoading ? "Checking availability..." : "Next: Choose Board Plan"}
       </button>
     </div>
   )

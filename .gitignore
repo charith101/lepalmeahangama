@@ -12,3 +12,6 @@ graphify-out/
 .vscode/
 opencode.json
 .opencode/
+
+docs/
+scripts/

@@ -1,7 +1,9 @@
-export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+export const APP_URL = (
+  process.env.NEXT_PUBLIC_APP_URL || "https://lepalmeahangama.com"
+).replace(/\/+$/, "")
 
 export const HOTEL_NAME = "Le Palme Ahangama"
-export const HOTEL_PHONE_DISPLAY = "0769617372"
+export const HOTEL_PHONE_DISPLAY = "076 961 7372"
 export const HOTEL_PHONE_TEL = "+94769617372"
 export const HOTEL_EMAIL = "info@lepalmeahangama.com"
 
@@ -14,11 +16,28 @@ export const HOTEL_ADDRESS_FULL = `${HOTEL_ADDRESS_STREET}, ${HOTEL_ADDRESS_LOCA
 export const HOTEL_LATITUDE = 5.978959218567139
 export const HOTEL_LONGITUDE = 80.36230480227772
 
+// Short, search-snippet-friendly description (~155 characters). The long
+// HOTEL_DESCRIPTION below is used in structured data and on-page copy.
+export const HOTEL_SEO_DESCRIPTION =
+  "Le Palme Ahangama is a charming boutique hotel near Ahangama Beach, Sri Lanka — family rooms, lush gardens, a sun terrace, and free WiFi."
+
+// Property photos used for structured data and social previews.
+export const HOTEL_IMAGES = [
+  `${APP_URL}/og-image.jpg`,
+  `${APP_URL}/images/IMG-2.jpeg`,
+  `${APP_URL}/images/IMG-3.jpeg`,
+  `${APP_URL}/images/IMG-4.jpeg`,
+]
+
+export const HOTEL_CHECK_IN = "14:00"
+export const HOTEL_CHECK_OUT = "11:00"
+
+
 export const HOTEL_DESCRIPTION =
   "Le Palme Ahangama offers family rooms with private bathrooms, balconies, and garden views, plus air-conditioning, a work desk, and free WiFi. Relax on the sun terrace or in the garden, enjoy the lounge, outdoor fireplace, and children's playground, and choose from a shared kitchen, coffee shop, and outdoor seating area. Start each morning with a full English or Irish breakfast with vegetarian and Asian options, plus local specialties, warm dishes, fresh pastries, and fruits."
 
 export const HOTEL_SHORT_DESCRIPTION =
-  "A charming boutique property in Ahangama, Sri Lanka — comfortable rooms, lush gardens, sun terrace, and a friendly host near Kabalana Beach."
+  "A charming boutique property in Ahangama, Sri Lanka — comfortable rooms, lush gardens, sun terrace, and a friendly host near Ahangama Beach."
 
 export const HOTEL_MAP_EMBED_URL =
   `https://www.google.com/maps?q=${HOTEL_LATITUDE},${HOTEL_LONGITUDE}&hl=en&z=15&output=embed`
@@ -52,7 +71,7 @@ export type BoardPlan = "room_only" | "half_board" | "full_board"
 
 export const BOARD_PLANS: ReadonlyArray<{ key: BoardPlan; label: string; pricePerNight: number; description: string }> = [
   { key: "room_only", label: "Room Only", pricePerNight: 0, description: "Accommodation only — no meals included." },
-  { key: "half_board", label: "Half Board", pricePerNight: 10, description: "Daily breakfast and dinner at our ocean-view restaurant." },
+  { key: "half_board", label: "Half Board", pricePerNight: 10, description: "Daily breakfast and dinner in our garden restaurant." },
   { key: "full_board", label: "Full Board", pricePerNight: 20, description: "Breakfast, lunch, and dinner every day of your stay." },
 ]
 
@@ -90,3 +109,13 @@ export const SURFBOARD_TIERS: TieredPricing = {
 export function isSurfboardTiered(categoryId: string): boolean {
   return categoryId === EQUIPMENT_SURFBOARD
 }
+
+export const BOOKING_STATUSES = [
+  "pending_payment",
+  "confirmed",
+  "checked_in",
+  "checked_out",
+  "cancelled",
+  "no_show",
+  "maintenance_block",
+] as const

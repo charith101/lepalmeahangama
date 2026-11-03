@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { MapPin, Phone, Mail } from "lucide-react"
 import {
@@ -23,12 +24,19 @@ export function PublicFooter() {
       <div className="max-w-6xl mx-auto px-6 pt-20 pb-8">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-16">
           <div>
-            <span className="text-white dark:text-stone-100 text-lg font-serif font-normal tracking-wide">
+            <span className="flex items-center gap-3 text-white dark:text-stone-100 text-lg font-serif font-normal tracking-wide">
+              <Image
+                src="/images/IMG_1457.png"
+                alt="Le Palme logo"
+                width={378}
+                height={334}
+                className="h-12 w-auto"
+              />
               {HOTEL_NAME}
             </span>
             <p className="mt-3 text-sm font-sans leading-relaxed max-w-xs">
               A charming boutique property in Ahangama — comfortable rooms, lush
-              gardens, sun terrace, and a friendly host near Kabalana Beach.
+              gardens, sun terrace, and a friendly host near Ahangama Beach.
             </p>
           </div>
           <div>

@@ -15,7 +15,8 @@ type Invoice = {
   issued_at: string | null
 }
 
-export function InvoiceView({ invoice }: { invoice: Invoice }) {
+export function InvoiceView({ invoice, paidTotal }: { invoice: Invoice; paidTotal?: number }) {
+  const balance = typeof paidTotal === "number" ? Math.max(0, invoice.grand_total_usd - paidTotal) : null
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -41,6 +42,14 @@ export function InvoiceView({ invoice }: { invoice: Invoice }) {
           <span>Grand Total</span>
           <span>{formatCurrency(invoice.grand_total_usd)}</span>
         </div>
+        {balance !== null && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Balance remaining</span>
+            <span className={balance > 0 ? "text-destructive font-medium" : "font-medium"}>
+              {formatCurrency(balance)} of {formatCurrency(invoice.grand_total_usd)}
+            </span>
+          </div>
+        )}
         {invoice.issued_at && (
           <p className="text-xs text-muted-foreground pt-1">
             Issued {format(new Date(invoice.issued_at), "PPp")}

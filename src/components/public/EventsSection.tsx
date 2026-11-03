@@ -28,7 +28,7 @@ export function EventsSection() {
               Events & Gatherings
             </h2>
             <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base font-sans leading-relaxed">
-              From intimate dinners to destination celebrations, our beachfront
+              From intimate dinners to destination celebrations, our garden
               venue provides a stunning backdrop for life&apos;s most memorable moments.
             </p>
           </div>

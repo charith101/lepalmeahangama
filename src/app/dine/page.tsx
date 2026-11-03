@@ -1,10 +1,12 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Dining",
   description: "Start the morning with a full English or Irish breakfast — vegetarian and Asian options, local specialties, fresh pastries, and fruits — at Le Palme Ahangama.",
-}
+  path: "/dine",
+})
 
 export default function DinePage() {
   return (
@@ -35,10 +37,10 @@ export default function DinePage() {
                 your own simple meal whenever the mood strikes.
               </p>
               <Link
-                href="/booking"
+                href="/contact?subject=Table%20Reservation"
                 className="inline-block px-8 py-2.5 bg-stone-900 dark:bg-stone-800 text-white text-sm font-sans font-medium hover:bg-stone-800 dark:hover:bg-stone-700 transition-colors"
               >
-                Reserve a Table
+                Reserve a table — we&apos;ll confirm by email
               </Link>
             </div>
             <div className="relative aspect-4/3 overflow-hidden bg-stone-200 dark:bg-stone-800">

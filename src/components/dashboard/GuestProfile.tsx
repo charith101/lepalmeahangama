@@ -135,7 +135,7 @@ export function GuestProfile({ data }: { data: GuestProfileData }) {
         <Button onClick={() => router.push(`/dashboard/guests`)} variant="outline">
           Back to Guests
         </Button>
-        <Button onClick={() => router.push(`/dashboard/bookings/new`)}>
+        <Button onClick={() => router.push(`/dashboard/bookings/new?guestId=${encodeURIComponent(data.guest.id)}`)}>
           New Booking for {data.guest.full_name.split(" ")[0]}
         </Button>
       </div>
